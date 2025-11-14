@@ -10,3 +10,4 @@ export * from './Sampler.js';
 export * from './Texture.js';
 export * from './Transform.js';
 export * from './Vertex.js';
+export * from './Light.js';

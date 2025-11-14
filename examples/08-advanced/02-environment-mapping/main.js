@@ -22,7 +22,7 @@ const renderer = new Renderer(canvas);
 await renderer.initialize();
 
 const loader = new GLTFLoader();
-await loader.load(new URL('../../../models/monkey/monkey.gltf', import.meta.url));
+await loader.load(new URL('../../../models/sun/sonce-proto.gltf', import.meta.url));
 
 const scene = loader.loadScene();
 const camera = loader.loadNode('Camera');

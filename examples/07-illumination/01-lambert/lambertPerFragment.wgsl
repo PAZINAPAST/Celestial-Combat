@@ -59,7 +59,7 @@ fn fragment(input: FragmentInput) -> FragmentOutput {
     var output: FragmentOutput;
 
     let N = normalize(input.normal);
-    let L = light.direction;
+    let L = normalize(light.direction);
 
     let lambert = max(dot(N, L), 0.0);
     let diffuseLight = lambert * light.color;
