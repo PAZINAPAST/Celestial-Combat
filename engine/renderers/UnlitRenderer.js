@@ -119,6 +119,7 @@ export class UnlitRenderer extends BaseRenderer {
 
     prepareTexture(texture) {
         if (this.gpuObjects.has(texture)) {
+            console.log("texture already prepared");
             return this.gpuObjects.get(texture);
         }
 
