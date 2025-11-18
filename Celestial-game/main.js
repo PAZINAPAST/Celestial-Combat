@@ -14,10 +14,13 @@ import {
     Sampler,
     Texture,
     Transform,
-    Light
+    Light,
+    Parent
 } from 'engine/core/core.js';
 
 import { loadResources } from 'engine/loaders/resources.js';
+import { GLTFLoader } from 'engine/loaders/GLTFLoader.js';
+import { ImageLoader } from 'engine/loaders/ImageLoader.js';
 
 const resources1 = await loadResources({
     'mesh': new URL('../../../models/sun/sonce-proto.obj', import.meta.url),
@@ -36,12 +39,12 @@ const resources3 = await loadResources({
 
 const skyboxResources = await loadResources({
     mesh: new URL('../../../models/cube/cube.json', import.meta.url),
-    px: new URL('../../../models/space/vesolje.jpg', import.meta.url),
-    nx: new URL('../../../models/space/vesolje.jpg', import.meta.url),
-    py: new URL('../../../models/space/vesolje.jpg', import.meta.url),
-    ny: new URL('../../../models/space/vesolje.jpg', import.meta.url),
-    pz: new URL('../../../models/space/vesolje.jpg', import.meta.url),
-    nz: new URL('../../../models/space/vesolje.jpg', import.meta.url),
+    px: new URL('../../../models/space/vesolje8.png', import.meta.url),
+    nx: new URL('../../../models/space/vesolje8.png', import.meta.url),
+    py: new URL('../../../models/space/vesolje8.png', import.meta.url),
+    ny: new URL('../../../models/space/vesolje8.png', import.meta.url),
+    pz: new URL('../../../models/space/vesolje8.png', import.meta.url),
+    nz: new URL('../../../models/space/vesolje8.png', import.meta.url),
 });
 
 
@@ -136,7 +139,70 @@ floor.addComponent(new Model({
 }));
 */
 // we use the renderer's built-in environment skybox; do not add a cube-entity to the scene
-const scene = [model1, model2, camera];
+
+//load textures for and earth
+const imgLoader = new ImageLoader();
+const greenImg = await imgLoader.load(new URL('./models/zemlja/green.jpg', import.meta.url))
+const blueImg = await imgLoader.load(new URL('./models/zemlja/blue.jpg', import.meta.url))
+const moonImg = await imgLoader.load(new URL('./models/zemlja/moonImg.jpg', import.meta.url))
+
+//importing sonce
+let loader = new GLTFLoader();
+await loader.load(new URL('./models/sonce/sonce2.gltf', import.meta.url));
+const sonce = loader.loadScene()[0];
+const sonceTransform = sonce.getComponentOfType(Transform);
+sonceTransform.translation = [1, -2, 0];
+
+loader = new GLTFLoader();
+await loader.load(new URL('./models/zemlja/zemlja-proto.gltf', import.meta.url));
+const zemlja = loader.loadScene()[1];
+const luna = loader.loadScene()[2];
+luna.addComponent(new Parent(zemlja));
+console.log(zemlja);
+console.log(sonce);
+
+
+//adding texture image to sun and earth
+const zemljaModel = zemlja.getComponentOfType(Model);
+zemljaModel.primitives[1].material.baseTexture = new Texture({
+                    image: greenImg,
+                    sampler: new Sampler({
+                        minFilter: 'linear',
+                        magFilter: 'linear',
+                        addressModeU: 'clamp-to-edge',
+                        addressModeV: 'clamp-to-edge',
+                    })});
+
+zemljaModel.primitives[0].material.baseTexture = new Texture({
+                    image: blueImg,
+                    sampler: new Sampler({
+                        minFilter: 'linear',
+                        magFilter: 'linear',
+                        addressModeU: 'clamp-to-edge',
+                        addressModeV: 'clamp-to-edge',
+                    })});
+
+
+const lunaModel = luna.getComponentOfType(Model);
+lunaModel.primitives[0].material.baseTexture = new Texture({
+                    image: moonImg,
+                    sampler: new Sampler({
+                        minFilter: 'linear',
+                        magFilter: 'linear',
+                        addressModeU: 'clamp-to-edge',
+                        addressModeV: 'clamp-to-edge',
+                    })});
+
+
+//transforming objects in the scene
+const zemljaTransform = zemlja.getComponentOfType(Transform);
+const lunaTransform = luna.getComponentOfType(Transform);
+lunaTransform.translation = [0.15, 0.15, -0.2];
+lunaTransform.scale = [0.5, 0.5, 0.5];
+zemljaTransform.translation = [-1, -0.4, 0.2];
+
+//final scene
+const scene = [camera, sonce, zemlja, luna];
 
 const light = new Entity();
 light.addComponent(new Light({

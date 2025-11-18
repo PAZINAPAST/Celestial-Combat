@@ -1,11 +1,8 @@
 {
 	"asset":{
-		"generator":"Khronos glTF Blender I/O v4.3.47",
+		"generator":"Khronos glTF Blender I/O v3.6.6",
 		"version":"2.0"
 	},
-	"extensionsUsed":[
-		"KHR_materials_specular"
-	],
 	"scene":0,
 	"scenes":[
 		{
@@ -27,20 +24,14 @@
 				0.8937962055206299
 			],
 			"translation":[
-				7.358891487121582,
-				4.958309173583984,
-				6.925790786743164
+				2.4529638290405273,
+				1.6527697245279949,
+				2.308596928914388
 			]
 		},
 		{
 			"mesh":0,
-			"name":"Icosphere",
-			"rotation":[
-				0.7071068286895752,
-				0,
-				0,
-				0.7071068286895752
-			]
+			"name":"Suzanne"
 		}
 	],
 	"cameras":[
@@ -48,7 +39,7 @@
 			"name":"Camera",
 			"perspective":{
 				"aspectRatio":1.7777777777777777,
-				"yfov":0.39959652046304894,
+				"yfov":1,
 				"zfar":100,
 				"znear":0.10000000149011612
 			},
@@ -58,31 +49,31 @@
 	"materials":[
 		{
 			"doubleSided":true,
-			"extensions":{
-				"KHR_materials_specular":{
-					"specularFactor":0
-				}
+			"name":"Material",
+			"normalTexture": {
+				"index":1
 			},
-			"name":"Material.004",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
 					"index":0
 				},
-				"metallicFactor":0
+				"metallicFactor":0,
+				"roughnessFactor":0.5
 			}
 		}
 	],
 	"meshes":[
 		{
-			"name":"Icosphere",
+			"name":"Suzanne",
 			"primitives":[
 				{
 					"attributes":{
 						"POSITION":0,
-						"NORMAL":1,
-						"TEXCOORD_0":2
+						"TEXCOORD_0":1,
+						"NORMAL":2,
+						"TANGENT":3
 					},
-					"indices":3,
+					"indices":4,
 					"material":0
 				}
 			]
@@ -92,74 +83,95 @@
 		{
 			"sampler":0,
 			"source":0
+		},
+		{
+			"sampler":0,
+			"source":1
 		}
 	],
 	"images":[
 		{
-			"mimeType":"image/jpeg",
-			"name":"Base color",
-			"uri":"Base%20color.jpg"
+			"mimeType":"image/png",
+			"name":"base",
+			"uri":"base.png"
+		},
+		{
+			"mimeType":"image/webp",
+			"name":"normal",
+			"uri":"normal.webp"
 		}
 	],
 	"accessors":[
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":1082,
+			"count":556,
 			"max":[
-				0.515425980091095,
-				0.500665009021759,
-				0.006891000084578991
+				1.3671875,
+				0.984375,
+				0.8515625
 			],
 			"min":[
-				-0.515425980091095,
-				-0.21197199821472168,
-				-1.8510069847106934
+				-1.3671875,
+				-0.984375,
+				-0.8515625
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":1082,
-			"type":"VEC3"
+			"count":556,
+			"type":"VEC2"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":1082,
-			"type":"VEC2"
+			"count":556,
+			"type":"VEC3"
 		},
 		{
 			"bufferView":3,
+			"componentType":5126,
+			"count":556,
+			"type":"VEC4"
+		},
+		{
+			"bufferView":4,
 			"componentType":5123,
-			"count":1428,
+			"count":2904,
 			"type":"SCALAR"
 		}
 	],
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":12984,
+			"byteLength":6672,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":12984,
-			"byteOffset":12984,
+			"byteLength":4448,
+			"byteOffset":6672,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":8656,
-			"byteOffset":25968,
+			"byteLength":6672,
+			"byteOffset":11120,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":2856,
-			"byteOffset":34624,
+			"byteLength":8896,
+			"byteOffset":17792,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":5808,
+			"byteOffset":26688,
 			"target":34963
 		}
 	],
@@ -171,8 +183,8 @@
 	],
 	"buffers":[
 		{
-			"byteLength":37480,
-			"uri":"sonce.bin"
+			"byteLength":32496,
+			"uri":"monkey.bin"
 		}
 	]
 }
