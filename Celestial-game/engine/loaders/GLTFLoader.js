@@ -22,6 +22,11 @@ import {
 
 export class GLTFLoader {
 
+    //mapa ki se uporablja samo za nalaganje animacij
+    constructor(){
+        this.nodeToEntity = {};
+    }
+
     /**
      * Loads the GLTF JSON file and all buffers and images that it references.
      * It also creates a cache for all future resource loading.
@@ -352,6 +357,10 @@ export class GLTFLoader {
             if (texcoords) { options.texcoords = texcoords.get(i); }
             if (normal) { options.normal = normal.get(i); }
             if (tangent) { options.tangent = tangent.get(i); }
+            
+            //added for animations:
+            if (accessors.JOINTS_0) { options.joints = accessors.JOINTS_0.get(i); }
+            if (accessors.WEIGHTS_0) { options.weights = accessors.WEIGHTS_0.get(i); }
 
             vertices.push(new Vertex(options));
         }
@@ -446,23 +455,46 @@ export class GLTFLoader {
 
         const entity = new Entity();
 
+        //to rabimo zaradi animacij (ko jih loadamo - da vemo kako mappat target)
+        //to je dictionary, kjer je key nodeIndex, value pa Entity ki pripada temu indexu
+        this.nodeToEntity[nameOrIndex] = entity; 
+
+        //if it has a name, then add it
+        if (gltfSpec.name !== undefined){
+            entity.name = gltfSpec.name;
+        }
+
         entity.addComponent(new Transform(gltfSpec));
 
+        //------ Mesh & Skin -------
+        if (gltfSpec.mesh !== undefined) {
+            // console.log("loading mesh at index: ");
+            // console.log(nameOrIndex);
+            const model = this.loadMesh(gltfSpec.mesh);
+            entity.addComponent(model);
+
+            if (gltfSpec.skin !== undefined) {
+                const skin = this.loadSkin(gltfSpec.skin);
+                model.skin = skin;
+            }
+        }
+
+        //   ------ Children --------
         if (gltfSpec.children) {
             for (const childIndex of gltfSpec.children) {
                 const childNode = this.loadNode(childIndex);
                 childNode.addComponent(new Parent(entity));
+
+                entity.addChild(childNode);
             }
         }
 
+        //   ------ Camera --------
         if (gltfSpec.camera !== undefined) {
             entity.addComponent(this.loadCamera(gltfSpec.camera));
         }
 
-        if (gltfSpec.mesh !== undefined) {
-            entity.addComponent(this.loadMesh(gltfSpec.mesh));
-        }
-
+        //   ------ Extras --------
         if (gltfSpec.extras) {
             entity.customProperties = structuredClone(gltfSpec.extras);
         }
@@ -489,4 +521,65 @@ export class GLTFLoader {
         return scene;
     }
 
+    //added
+    loadSkin(nameOrIndex) {
+        const gltfSpec = this.findByNameOrIndex(this.gltf.skins, nameOrIndex);
+        if (!gltfSpec) return null;
+        if (this.cache.has(gltfSpec)) return this.cache.get(gltfSpec);
+
+        const inverseBindAccessor = this.loadAccessor(gltfSpec.inverseBindMatrices);
+        const inverseBindMatrices = [];
+        for (let i = 0; i < inverseBindAccessor.count; i++) {
+            inverseBindMatrices.push(inverseBindAccessor.get(i));
+        }
+
+        const joints = gltfSpec.joints.map(j => this.loadNode(j));
+
+        const skin = { joints, inverseBindMatrices };
+        this.cache.set(gltfSpec, skin);
+        return skin;
+    }
+
+    //loadamo animacijo pri indeksu
+    loadAnimation(nameOrIndex) {
+        const gltfSpec = this.findByNameOrIndex(this.gltf.animations, nameOrIndex);
+        if (!gltfSpec) return null;
+
+        const animation = {
+            name: gltfSpec.name ?? 'Unnamed',
+            channels: [],
+            maxTime: 0
+        };
+
+        for (const channel of gltfSpec.channels) {
+            const samplerSpec = gltfSpec.samplers[channel.sampler];
+
+            // Load accessors
+            const inputAccessor  = this.loadAccessor(samplerSpec.input);
+            const outputAccessor = this.loadAccessor(samplerSpec.output);
+
+            // Keyframe data
+            const times  = inputAccessor.getAll();    // Float32Array or array
+            const values = outputAccessor.getAll();   // Array of vec3/vec4
+
+            // Track animation duration
+            const lastTime = times[times.length - 1];
+            if (lastTime > animation.maxTime)
+                animation.maxTime = lastTime;
+
+            // Convert glTF nodes → your ECS entity
+            const targetEntity = this.nodeToEntity[channel.target.node];
+
+            animation.channels.push({
+                target: targetEntity,                   // ← important!
+                path: channel.target.path,              // 'translation', 'rotation', 'scale'
+                interpolation: samplerSpec.interpolation ?? 'LINEAR',
+                times,
+                values,
+                type: channel.target.path               // rename to match Animator
+            });
+        }
+
+        return animation;
+    }
 }

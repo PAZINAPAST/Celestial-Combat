@@ -30,14 +30,23 @@ export function calculateAxisAlignedBoundingBox(mesh) {
     };
 }
 
+//ta funkcija je posodobljena tako da dela tudi na objektih z vec kot enim primitivom
+//najde min in max vrednosti v vseh dimenzijah in potem ustvari collider box (kvader) okoli objekta
 export function mergeAxisAlignedBoundingBoxes(boxes) {
-    const initial = {
-        min: vec3.clone(boxes[0].min),
-        max: vec3.clone(boxes[0].max),
-    };
+    boxes = boxes.filter(b => b && b.min && b.max);
+    if (boxes.length === 0) {
+        return {
+            min: vec3.fromValues(0, 0, 0),
+            max: vec3.fromValues(0, 0, 0)
+        };
+    }
 
-    return {
-        min: boxes.reduce(({ min: amin }, { min: bmin }) => vec3.min(amin, amin, bmin), initial),
-        max: boxes.reduce(({ max: amax }, { max: bmax }) => vec3.max(amax, amax, bmax), initial),
-    };
+    const outMin = vec3.clone(boxes[0].min);
+    const outMax = vec3.clone(boxes[0].max);
+
+    for (let i = 1; i < boxes.length; i++) {
+        vec3.min(outMin, outMin, boxes[i].min);
+        vec3.max(outMax, outMax, boxes[i].max);
+    }
+    return { min: outMin, max: outMax };
 }

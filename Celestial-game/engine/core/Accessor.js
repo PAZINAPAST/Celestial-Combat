@@ -61,6 +61,15 @@ export class Accessor {
         return [...this.view.slice(start, end)].map(this.normalize);
     }
 
+    //helper funkcija za GLTFLoaderjev loadAnimation()
+    getAll() {
+        const data = [];
+        for (let i = 0; i < this.count; i++) {
+            data.push(this.get(i));
+        }
+        return data;
+    }
+
     set(index, value) {
         const start = index * this.strideInElements + this.offsetInElements;
         this.view.set(value.map(this.denormalize), start);

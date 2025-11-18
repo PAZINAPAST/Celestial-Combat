@@ -12,8 +12,9 @@ import {
     getProjectionMatrix,
 } from 'engine/core/SceneUtils.js';
 
+
 const vertexBufferLayout = {
-    arrayStride: 32,
+    arrayStride: 76,
     attributes: [
         {
             name: 'position',
@@ -33,6 +34,26 @@ const vertexBufferLayout = {
             offset: 20,
             format: 'float32x3',
         },
+        
+        //added for animation
+        {
+            name: "tangent",
+            shaderLocation: 3,
+            offset: 32,
+            format: "float32x3",
+        },
+        {
+            name: "joints",
+            shaderLocation: 4,
+            offset: 44,
+            format: "uint32x4",
+        },
+        {
+            name: "weights",
+            shaderLocation: 5,
+            offset: 60,
+            format: "float32x4",
+        }
     ],
 };
 
@@ -173,14 +194,21 @@ export class SkyBoxRenderer extends BaseRenderer {
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
 
+        //adding joint uniform buffer
+        const jointUniformBuffer = this.device.createBuffer({
+            size: 64*100, //100 bones max (each mat4x4<f32> = 64 bytes)
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        })
+
         const modelBindGroup = this.device.createBindGroup({
             layout: this.pipeline.getBindGroupLayout(1),
             entries: [
                 { binding: 0, resource: modelUniformBuffer },
+                { binding: 1, resource: jointUniformBuffer },
             ],
         });
 
-        const gpuObjects = { modelUniformBuffer, modelBindGroup };
+        const gpuObjects = { modelUniformBuffer, jointUniformBuffer, modelBindGroup };
         this.gpuObjects.set(entity, gpuObjects);
         return gpuObjects;
     }
@@ -369,9 +397,25 @@ export class SkyBoxRenderer extends BaseRenderer {
         const modelMatrix = getGlobalModelMatrix(entity);
         const normalMatrix = mat4.normalFromMat4(mat4.create(), modelMatrix);
 
-        const { modelUniformBuffer, modelBindGroup } = this.prepareEntity(entity);
+        const { modelUniformBuffer, jointUniformBuffer, modelBindGroup } = this.prepareEntity(entity);
         this.device.queue.writeBuffer(modelUniformBuffer, 0, modelMatrix);
         this.device.queue.writeBuffer(modelUniformBuffer, 64, normalMatrix);
+
+        //if this entity has a skinned model:
+        const model = entity.getComponentOfType(Model);
+        if (model?.skin){
+            const jointMatrices = [];
+            for (let i = 0; i < model.skin.joints.length; i++){
+                const jointEntity = model.skin.joints[i];
+                const jointMatrix = getGlobalModelMatrix(jointEntity);  //jointWorldMatrix
+                const invBind = model.skin.inverseBindMatrices[i];
+                const final = mat4.multiply(mat4.create(), jointMatrix, invBind);
+                jointMatrices.push(...final);
+            }
+
+            this.device.queue.writeBuffer(jointUniformBuffer, 0, new Float32Array(jointMatrices));
+        }
+
         this.renderPass.setBindGroup(1, modelBindGroup);
 
         for (const model of entity.getComponentsOfType(Model)) {

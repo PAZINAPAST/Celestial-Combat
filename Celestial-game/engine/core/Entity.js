@@ -1,7 +1,12 @@
+import { Model } from '../core/core.js';
+
 export class Entity {
 
-    constructor(components = []) {
+    constructor(components = [], name="noName") {
         this.components = components;
+        this.name = name;
+        this.children = [];
+
     }
 
     addComponent(component) {
@@ -24,4 +29,15 @@ export class Entity {
         return this.components.filter(component => component instanceof type);
     }
 
+    //needed for animation - to import skinned object
+    addChild(entity){
+        this.children.push(entity);
+    }
+
+    //funkcija ki izpise hierarhijo... basically izpise vse otroke in njihova imena (dopise tudi [Model] pri otroku ki ga ima)
+    printTree(indent = "") {
+        const model = this.getComponentOfType(Model);
+        console.log(indent + this.name + (model ? " [Model]" : ""));
+        for (const c of this.children) c.printTree(indent + "  ");
+    }
 }

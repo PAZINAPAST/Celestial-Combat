@@ -2,6 +2,9 @@ struct VertexInput {
     @location(0) position: vec3f,
     @location(1) texcoords: vec2f,
     @location(2) normal: vec3f,
+    @location(3) tangent : vec3<f32>,
+    @location(4) joints: vec4<u32>, //optional
+    @location(5) weights: vec4<f32>, //optional
 }
 
 struct VertexOutput {
@@ -47,23 +50,48 @@ struct LightUniforms {
     _pad: f32,
 }
 
+//skin uniform array (max 100 bones)
+struct SkinUniforms {
+    joints : array<mat4x4<f32>, 100>
+}
 
 
+//group 0
 @group(0) @binding(0) var<uniform> camera: CameraUniforms;
+@group(0) @binding(1) var<uniform> light: LightUniforms;   
+
+//group 1
 @group(1) @binding(0) var<uniform> model: ModelUniforms;
+@group(1) @binding(1) var<uniform> skin : SkinUniforms;
+
+//group 2
 @group(2) @binding(0) var<uniform> material: MaterialUniforms;
 @group(2) @binding(1) var uBaseTexture: texture_2d<f32>;
 @group(2) @binding(2) var uBaseSampler: sampler;
+
+//group 3
 @group(3) @binding(0) var uEnvironmentTexture: texture_cube<f32>;
 @group(3) @binding(1) var uEnvironmentSampler: sampler;
-@group(0) @binding(1) var<uniform> light: LightUniforms;    
+ 
 
 
 @vertex
 fn vertex(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
 
-    let position = model.modelMatrix * vec4(input.position, 1);
+    var skinMatrix = mat4x4<f32>();
+    let totalWeight = input.weights.x + input.weights.y + input.weights.z + input.weights.w;
+
+    if (totalWeight > 0.0) {    //this check ensures static meshes still render even though they have no joints or weights
+        for (var i: u32 = 0u; i < 4u; i = i + 1u) { //each vertex in skinned meshes is affected by 4 joints (by certain weight)
+            skinMatrix += skin.joints[input.joints[i]] * input.weights[i];
+        }
+    } else {
+        skinMatrix = model.modelMatrix;
+    }
+
+
+    let position = skinMatrix * vec4(input.position, 1.0);
 
     output.position = position.xyz;
     output.clipPosition = camera.projectionMatrix * camera.viewMatrix * position;

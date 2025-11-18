@@ -22,6 +22,11 @@ import { loadResources } from 'engine/loaders/resources.js';
 import { GLTFLoader } from 'engine/loaders/GLTFLoader.js';
 import { ImageLoader } from 'engine/loaders/ImageLoader.js';
 
+import { AnimationSystem } from 'engine/animators/AnimationSystem.js'
+import { Animator } from 'engine/animators/Animator.js'
+
+import { mat4, vec3, quat } from 'glm';
+
 const resources1 = await loadResources({
     'mesh': new URL('../../../models/sun/sonce-proto.obj', import.meta.url),
     'image': new URL('../../../models/monkey/base.png', import.meta.url),
@@ -151,7 +156,7 @@ let loader = new GLTFLoader();
 await loader.load(new URL('./models/sonce/sonce2.gltf', import.meta.url));
 const sonce = loader.loadScene()[0];
 const sonceTransform = sonce.getComponentOfType(Transform);
-sonceTransform.translation = [1, -2, 0];
+sonceTransform.translation = [2, -2, 0];
 
 loader = new GLTFLoader();
 await loader.load(new URL('./models/zemlja/zemlja-proto.gltf', import.meta.url));
@@ -199,10 +204,31 @@ const zemljaTransform = zemlja.getComponentOfType(Transform);
 const lunaTransform = luna.getComponentOfType(Transform);
 lunaTransform.translation = [0.15, 0.15, -0.2];
 lunaTransform.scale = [0.5, 0.5, 0.5];
-zemljaTransform.translation = [-1, -0.4, 0.2];
+zemljaTransform.translation = [-2, -0.4, 0.2];
+
+//loading animated test object
+loader = new GLTFLoader();
+await loader.load(new URL('./models/testAnim2/player.gltf', import.meta.url));
+const loadedScene = loader.loadScene();
+const playerArmature = loadedScene[0];
+const player = playerArmature.children[0]; //actual mesh
+const playerModel = player.getComponentOfType(Model);
+
+//animating player
+const parsedAnimations = loader.loadAnimation(0, playerModel.skin);
+player.addComponent(new Animator(parsedAnimations));
+player.getComponentOfType(Animator).play(0);
+
+//transforming player
+const playerTransform = playerArmature.getComponentOfType(Transform);
+playerTransform.scale = [0.3, 0.3, 0.3];
+playerTransform.translation = [0, 0, 0];
+const rotQuat = quat.create();
+quat.setAxisAngle(rotQuat, [0, 1, 0], -Math.PI/2);
+playerTransform.rotation = rotQuat;
 
 //final scene
-const scene = [camera, sonce, zemlja, luna];
+const scene = [camera, sonce, zemlja, luna, player];
 
 const light = new Entity();
 light.addComponent(new Light({
@@ -210,6 +236,8 @@ light.addComponent(new Light({
 }));
 scene.push(light);
 
+//creating AnimationSystem
+const animSystem = new AnimationSystem();
 
 function update(time, dt) {
     for (const entity of scene) {
@@ -217,6 +245,8 @@ function update(time, dt) {
             component.update?.(time, dt);
         }
     }
+
+    animSystem.update(scene, dt);
 }
 
 function render() {

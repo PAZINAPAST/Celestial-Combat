@@ -5,11 +5,19 @@ export class Vertex {
         texcoords = [0, 0],
         normal = [0, 0, 0],
         tangent = [0, 0, 0],
+
+        //added
+        joints = [0, 0, 0, 0],
+        weights = [0, 0, 0, 0],
     } = {}) {
         this.position = position;
         this.texcoords = texcoords;
         this.normal = normal;
         this.tangent = tangent;
+
+        //added
+        this.joints = joints;
+        this.weights = weights;
     }
 
 }

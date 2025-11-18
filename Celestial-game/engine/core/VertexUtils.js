@@ -27,6 +27,10 @@ export function createVertexBuffer(vertices, layout) {
         for (let j = 0; j < layout.attributes.length; j++) {
             const accessor = accessors[j];
             const attribute = layout.attributes[j].name;
+
+            const value = vertex[attribute];
+            if (value === undefined) continue; //skip; missing attributes (like weights and joints)
+
             accessor.set(i, vertex[attribute]);
         }
     }
