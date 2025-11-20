@@ -29,8 +29,8 @@ export class AnimationSystem {
     }
 
     applyAnimation(animator) {
-        //const anim = animator.animations[animator.current];
-        const anim = animator.animations;  //its actually just one animation
+        const anim = animator.animations[animator.current];
+        //const anim = animator.animations;  //its actually just one animation
         const t = animator.time;
 
         for (const channel of anim.channels) {

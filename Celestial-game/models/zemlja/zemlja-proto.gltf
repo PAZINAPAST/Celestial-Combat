@@ -44,7 +44,7 @@
 		},
 		{
 			"mesh":0,
-			"name":"Icosphere.001",
+			"name":"earth",
 			"rotation":[
 				0.09758898615837097,
 				0,
@@ -118,7 +118,7 @@
 	],
 	"meshes":[
 		{
-			"name":"Icosphere.001",
+			"name":"earth",
 			"primitives":[
 				{
 					"attributes":{

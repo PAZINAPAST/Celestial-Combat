@@ -24,6 +24,8 @@ import { ImageLoader } from 'engine/loaders/ImageLoader.js';
 
 import { AnimationSystem } from 'engine/animators/AnimationSystem.js'
 import { Animator } from 'engine/animators/Animator.js'
+import { Physics } from 'engine/core/Physics.js';
+import { calculateAxisAlignedBoundingBox, mergeAxisAlignedBoundingBoxes, } from 'engine/core/MeshUtils.js';
 
 import { mat4, vec3, quat } from 'glm';
 
@@ -158,6 +160,7 @@ const sonce = loader.loadScene()[0];
 const sonceTransform = sonce.getComponentOfType(Transform);
 sonceTransform.translation = [2, -2, 0];
 
+//importing zemlja
 loader = new GLTFLoader();
 await loader.load(new URL('./models/zemlja/zemlja-proto.gltf', import.meta.url));
 const zemlja = loader.loadScene()[1];
@@ -204,37 +207,68 @@ const zemljaTransform = zemlja.getComponentOfType(Transform);
 const lunaTransform = luna.getComponentOfType(Transform);
 lunaTransform.translation = [0.15, 0.15, -0.2];
 lunaTransform.scale = [0.5, 0.5, 0.5];
-zemljaTransform.translation = [-2, -0.4, 0.2];
+zemljaTransform.translation = [2, 0.65, 0.2];
 
 //loading animated test object
 loader = new GLTFLoader();
-await loader.load(new URL('./models/testAnim2/player.gltf', import.meta.url));
+await loader.load(new URL('./models/sunAnimated2/animatedSun.gltf', import.meta.url));
 const loadedScene = loader.loadScene();
 const playerArmature = loadedScene[0];
+playerArmature.printTree();
 const player = playerArmature.children[0]; //actual mesh
 const playerModel = player.getComponentOfType(Model);
 
-//animating player
-const parsedAnimations = loader.loadAnimation(0, playerModel.skin);
-player.addComponent(new Animator(parsedAnimations));
-player.getComponentOfType(Animator).play(0);
+//loading animation and binding them to player
+const idleAnim = loader.loadAnimation("idle", playerModel.skin);
+const punchAnim = loader.loadAnimation("shortPunch", playerModel.skin);
+const stepForwardAnim = loader.loadAnimation("stepForwardFast", playerModel.skin);
+const stepBackAnim = loader.loadAnimation("stepBackFast", playerModel.skin);
+const jumpAnim = loader.loadAnimation("jump", playerModel.skin);
+player.addComponent(new Animator([idleAnim, punchAnim, stepForwardAnim, stepBackAnim, jumpAnim]));
+
 
 //transforming player
 const playerTransform = playerArmature.getComponentOfType(Transform);
-playerTransform.scale = [0.3, 0.3, 0.3];
-playerTransform.translation = [0, 0, 0];
-const rotQuat = quat.create();
-quat.setAxisAngle(rotQuat, [0, 1, 0], -Math.PI/2);
-playerTransform.rotation = rotQuat;
+// playerTransform.scale = [0.3, 0.3, 0.3];
+playerTransform.translation = [0, -1, 0];
+const rotQuat1 = quat.create();
+const rotQuat2 = quat.create();
+quat.setAxisAngle(rotQuat1, [1, 0, 0], Math.PI/2);
+quat.setAxisAngle(rotQuat2, [0, 1, 0], Math.PI/2);
+const finalQuat = quat.create();
+quat.multiply(finalQuat, rotQuat2, rotQuat1);
+playerTransform.rotation = finalQuat;
 
 //final scene
-const scene = [camera, sonce, zemlja, luna, player];
+const scene = [camera, zemlja, luna, player];
 
 const light = new Entity();
 light.addComponent(new Light({
     direction: [-1, 1, 1],
 }));
 scene.push(light);
+
+//adding collision detection (Physics.js file)
+const physics = new Physics(scene);
+for (const entity of scene) {
+    const model = entity.getComponentOfType(Model);
+    if (!model) {
+        continue;
+    }
+
+    const boxes = model.primitives.map(primitive => calculateAxisAlignedBoundingBox(primitive.mesh));
+    console.log(boxes);
+    entity.aabb = mergeAxisAlignedBoundingBoxes(boxes);
+    console.log(entity.aabb);
+}
+const ma = vec3.fromValues(1.0, 1.0, 1.0);
+const mi = vec3.fromValues(-1.0, -1.0, -1.0);
+player.aabb = {max:ma, min:mi};
+zemlja.aabb = {max:ma, min:mi};
+
+//defining static/non static objects
+player.customProperties = {isDynamic: true, isStatic: false}; 
+zemlja.customProperties = {isDynamic: false, isStatic: true};
 
 //creating AnimationSystem
 const animSystem = new AnimationSystem();
@@ -246,8 +280,77 @@ function update(time, dt) {
         }
     }
 
+    physics.update(time, dt);
     animSystem.update(scene, dt);
 }
+
+
+//-------------------------------------------------------------------EVENT LISTENERS and USER INPUT-----------------------------------------------------------------------
+let keys = {};
+window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+
+//--------------------------------------------------------------------PLAYER'S UPDATE METHOD--------------------------------------------------------------------------------
+let moveOnce = true;
+const playerAnimator = player.getComponentOfType(Animator);
+let velocity = 1.0;
+let gravity = 40.0;
+let initVelY = (gravity*0.49999995231628414)/2;
+let velocityY = initVelY;
+
+player.addComponent({
+    update(t, dt){
+        if (keys.d){
+            if (moveOnce){
+                playerAnimator.play(2);
+                // let pos = playerTransform.translation;
+                // playerTransform.translation = [pos[0]+1, pos[1], pos[2]];
+                moveOnce = false;
+            }  
+        }
+
+        if (keys.a){
+            if (moveOnce){
+                playerAnimator.play(3);
+                moveOnce = false;
+            }
+        }
+
+        if (keys.w){
+            velocityY = initVelY;
+            if (moveOnce){
+                playerAnimator.play(4);
+                moveOnce = false;
+            }
+        }
+
+        if (playerAnimator.playingAnim == 2){
+            playerTransform.translation[0] += velocity * dt;
+        }
+
+        if (playerAnimator.playingAnim == 3){
+            playerTransform.translation[0] += -velocity * dt;
+        }
+
+        if (playerAnimator.playingAnim == 4 && playerAnimator.time > 0.4 && playerAnimator.time < playerAnimator.animLen - 0.4){
+            velocityY -= gravity*dt;
+            playerTransform.translation[1] += velocityY*dt;
+        }
+
+
+        if (keys.r){
+            playerAnimator.play(1);
+            
+        }
+
+        if (!playerAnimator.playing){
+            moveOnce = true;
+            playerAnimator.play(0);
+        }
+
+    }
+});
 
 function render() {
     // The SkyBoxRenderer handles model drawing and the skybox in a single pass.
