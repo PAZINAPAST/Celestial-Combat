@@ -56,6 +56,13 @@ export class Physics {
 
     resolveCollision(a, b) {
         // Get global space AABBs.
+        // if (a.isAnimated){
+        //     const a_parent = a.getComponentOfType(Parent);
+        //     a = a_parent.entity;
+        // }
+
+        if (!a.aabb) { console.warn('No AABB for', a.name); return; }
+        if (!b.aabb) { console.warn('No AABB for', b.name); return; }
 
         const aBox = this.getTransformedAABB(a);
         const bBox = this.getTransformedAABB(b);
@@ -66,7 +73,8 @@ export class Physics {
             return;
         }
         console.log("collision between: " + a.name + " and " + b.name);
-
+        console.log(a.aabb);
+        console.log(aBox);
         // Move entity A minimally to avoid collision.
         const diffa = vec3.sub(vec3.create(), bBox.max, aBox.min);
         const diffb = vec3.sub(vec3.create(), aBox.max, bBox.min);
@@ -99,13 +107,15 @@ export class Physics {
         }
 
         let transform;
-        if (a.name == "sun"){
-            const parent = a.getComponentOfType(Parent);
-            transform = parent.entity.getComponentOfType(Transform);
+
+        if (a.isAnimated){
+            transform = a.getComponentOfType(Parent).entity.getComponentOfType(Transform);
         } else{
             transform = a.getComponentOfType(Transform);
         }
+
         if (!transform) {
+            console.log("no transform found");
             return;
         }
 

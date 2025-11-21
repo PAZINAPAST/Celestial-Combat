@@ -7,7 +7,7 @@ export class Animator {
         this.playing = false;
         this.loop = false;
         this.playingAnim =  -1          //indeks animacije ki se predvaja
-        this.animLen = -1;
+        this.animLen = -1;              //dolzina animacije v sekundah
     }
 
     play(index) {
@@ -21,16 +21,16 @@ export class Animator {
     }
 
     update1(dt) {
-        if (!this.playing || this.current === null) return;
+        if (!this.playing || this.current === null) return;     //ce se nobena animacija ne predvaja, potem nic ne naredi
         this.time += dt;
         const anim = this.animations[this.current];
-        //const anim = this.animations; //it's actually just one animation
+
         const duration = anim.maxTime;
 
         if (this.time > duration) {
-            if (this.loop) this.time = this.time % duration;
+            if (this.loop) this.time = this.time % duration;    //loopaj animacijo
             else {
-                this.time = duration;
+                this.time = duration;   //koncaj animacijo ker je cas presegel dolzino animacije
                 this.playing = false;
             }
         }

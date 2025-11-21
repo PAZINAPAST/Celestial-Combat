@@ -120,6 +120,41 @@ camera.addComponent(new Camera());
 camera.addComponent(new TouchController(camera, canvas, {
     distance: 5,
 }));
+
+const cube1Resources = await loadResources({
+    mesh: new URL('../../../models/cube/cube.json', import.meta.url),
+    image: new URL('../../../models/cube/cube-diffuse.png', import.meta.url),
+})
+
+const cube2 = new Entity([], "Box");
+cube2.addComponent(new Transform({
+    translation: [0, 0, 0],
+    scale: [1, 1, 1],
+    rotation: [0, 0, 0, 1],
+}));
+
+cube2.addComponent(new Model({
+    primitives:[
+        new Primitive({
+            mesh: cube1Resources.mesh,
+            material: new Material({
+                baseTexture: new Texture({
+                    image: cube1Resources.image,
+                    sampler: new Sampler({
+                        minFilter: 'nearest',
+                        magFilter: 'nearest',
+                        addressModeU: 'repeat',
+                        addressModeV: 'repeat'
+                    })
+                })
+            })
+        })
+    ]
+}));
+cube2.customProperties = {isDynamic: false, isStatic: true};
+const cubeTransform = cube2.getComponentOfType(Transform);
+cubeTransform.scale = [0.5, 2, 0.5];
+
 /*
 const floor = new Entity();
 floor.addComponent(new Transform({
@@ -226,11 +261,12 @@ const stepBackAnim = loader.loadAnimation("stepBackFast", playerModel.skin);
 const jumpAnim = loader.loadAnimation("jump", playerModel.skin);
 player.addComponent(new Animator([idleAnim, punchAnim, stepForwardAnim, stepBackAnim, jumpAnim]));
 
+player.isAnimated = true;
+
 
 //transforming player
 const playerTransform = playerArmature.getComponentOfType(Transform);
-// playerTransform.scale = [0.3, 0.3, 0.3];
-playerTransform.translation = [0, -1, 0];
+playerTransform.translation = [-2, -1, 0];
 const rotQuat1 = quat.create();
 const rotQuat2 = quat.create();
 quat.setAxisAngle(rotQuat1, [1, 0, 0], Math.PI/2);
@@ -240,7 +276,7 @@ quat.multiply(finalQuat, rotQuat2, rotQuat1);
 playerTransform.rotation = finalQuat;
 
 //final scene
-const scene = [camera, zemlja, luna, player];
+const scene = [camera, zemlja, luna, player, /*cube2*/];
 
 const light = new Entity();
 light.addComponent(new Light({
@@ -248,7 +284,7 @@ light.addComponent(new Light({
 }));
 scene.push(light);
 
-//adding collision detection (Physics.js file)
+//adding collision detection - bounding box around each object (Physics.js file)
 const physics = new Physics(scene);
 for (const entity of scene) {
     const model = entity.getComponentOfType(Model);
@@ -257,18 +293,28 @@ for (const entity of scene) {
     }
 
     const boxes = model.primitives.map(primitive => calculateAxisAlignedBoundingBox(primitive.mesh));
-    console.log(boxes);
-    entity.aabb = mergeAxisAlignedBoundingBoxes(boxes);
-    console.log(entity.aabb);
+
+    // if (entity.isAnimated){
+    //     const parentEntity = entity.getComponentOfType(Parent).entity;
+    //     parentEntity.aabb = mergeAxisAlignedBoundingBoxes(boxes);
+    //     entity.aabb = mergeAxisAlignedBoundingBoxes(boxes);
+
+    // } else{
+        entity.aabb = mergeAxisAlignedBoundingBoxes(boxes);
+    //}
+    
 }
-const ma = vec3.fromValues(1.0, 1.0, 1.0);
-const mi = vec3.fromValues(-1.0, -1.0, -1.0);
-player.aabb = {max:ma, min:mi};
-zemlja.aabb = {max:ma, min:mi};
+
+
+// const ma = vec3.fromValues(2.0, 2.0, 2.0);
+// const mi = vec3.fromValues(-2.0, -2.0, -2.0);
+// playerArmature.aabb = {max:ma, min:mi};
+// player.aabb = {max:ma, min:mi};
+//zemlja.aabb = {max:ma, min:mi};
 
 //defining static/non static objects
 player.customProperties = {isDynamic: true, isStatic: false}; 
-zemlja.customProperties = {isDynamic: false, isStatic: true};
+zemlja.customProperties = {isDynamic: true, isStatic: false};
 
 //creating AnimationSystem
 const animSystem = new AnimationSystem();
@@ -294,60 +340,82 @@ window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 //--------------------------------------------------------------------PLAYER'S UPDATE METHOD--------------------------------------------------------------------------------
 let moveOnce = true;
 const playerAnimator = player.getComponentOfType(Animator);
-let velocity = 1.0;
-let gravity = 40.0;
+let velocityLR = 2.0;
+let gravity = 50.0;
+let attacking = false;
+let grounded = true;
 let initVelY = (gravity*0.49999995231628414)/2;
 let velocityY = initVelY;
 
 player.addComponent({
     update(t, dt){
-        if (keys.d){
+
+        if (keys.t){
+            zemljaTransform.translation[0] -= dt;
+        }
+        if (keys.y){
+            zemljaTransform.translation[0] += dt;
+        }
+        //moving right
+        if (keys.d && attacking == false){
+            playerTransform.translation[0] += velocityLR * dt;
             if (moveOnce){
                 playerAnimator.play(2);
-                // let pos = playerTransform.translation;
-                // playerTransform.translation = [pos[0]+1, pos[1], pos[2]];
                 moveOnce = false;
             }  
         }
 
-        if (keys.a){
+        //moving left
+        if (keys.a && attacking == false){
+            playerTransform.translation[0] += -velocityLR * dt;
             if (moveOnce){
                 playerAnimator.play(3);
                 moveOnce = false;
             }
         }
 
-        if (keys.w){
-            velocityY = initVelY;
-            if (moveOnce){
+        //jumping (playing animation)
+        if (keys.w && attacking == false){
+            if (grounded){
+                velocityY = initVelY; //ta stvar triggera premikanje v vertikalni smeri
                 playerAnimator.play(4);
-                moveOnce = false;
+                grounded = false;
             }
         }
 
-        if (playerAnimator.playingAnim == 2){
-            playerTransform.translation[0] += velocity * dt;
-        }
-
-        if (playerAnimator.playingAnim == 3){
-            playerTransform.translation[0] += -velocity * dt;
-        }
-
+        //jumping (actually moving up-down)
         if (playerAnimator.playingAnim == 4 && playerAnimator.time > 0.4 && playerAnimator.time < playerAnimator.animLen - 0.4){
             velocityY -= gravity*dt;
             playerTransform.translation[1] += velocityY*dt;
         }
 
-
+        //punch
         if (keys.r){
-            playerAnimator.play(1);
+            if (grounded){
+                playerAnimator.play(1);
+                attacking = true;
+            }
             
         }
 
+        //reseting stuff | playing idle animation
         if (!playerAnimator.playing){
             moveOnce = true;
-            playerAnimator.play(0);
+            grounded = true;    
+            attacking = false;
+
+            console.log("grounded true");
+            if (playerTransform.translation[1] != -1){
+                console.log("correcting y-position");
+                playerTransform.translation[1] = -1;
+            } 
+            if (!keys.a && !keys.d && !keys.w){ //zato da objekt ne gre za 1 frame v idle mode potem pa ze v nek movind animation ce drzimo nek gumb
+                playerAnimator.play(0);
+            }
+            
         }
+
+
 
     }
 });

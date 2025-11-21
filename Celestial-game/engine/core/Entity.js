@@ -5,6 +5,7 @@ export class Entity {
     constructor(components = [], name="noName") {
         this.components = components;
         this.name = name;
+        this.isAnimated = false;
         this.children = [];
 
     }

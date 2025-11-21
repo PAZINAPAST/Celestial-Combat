@@ -705,7 +705,7 @@
 		},
 		{
 			"mesh":0,
-			"name":"Icosphere.001",
+			"name":"sun",
 			"skin":0
 		},
 		{
@@ -6732,7 +6732,7 @@
 	],
 	"meshes":[
 		{
-			"name":"Icosphere.001",
+			"name":"sun",
 			"primitives":[
 				{
 					"attributes":{
