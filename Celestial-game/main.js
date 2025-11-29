@@ -385,6 +385,49 @@ window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
 window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
 
+//--------- Character stats and health bars ----------------------------------------------------------------
+let maxHealth = 100;
+let healthPlayer = 100;
+let healthZemlja = 100;
+
+//------------------------------------------------- Starting and end screen -------------------------------------------------------------------------------------
+const startScreen = document.getElementById("start-screen");
+const endScreen = document.getElementById("game-over-screen");
+const endMessage = document.getElementById("gameover-message");
+const startButton = document.getElementById("start-button");
+const restartButton = document.getElementById("restart-button");
+
+let gameRunning = false;
+
+startButton.addEventListener("click", () => {
+    startScreen.classList.add("hidden");
+    gameRunning = true;
+    playerTransform.translation = [-2, -1, 0];
+    npcZemljaTransform.translation = [2, -1, 0];
+    healthPlayer = maxHealth;
+    healthZemlja = maxHealth;
+    updateHealthBars("player-health-bar", healthPlayer, maxHealth);
+    updateHealthBars("npcZemlja-health-bar", healthZemlja, maxHealth);
+});
+
+restartButton.addEventListener("click", () => {
+    endScreen.classList.add("hidden");
+    startScreen.classList.remove("hidden");
+    gameRunning = false;
+});
+
+function checkGameOver(){
+    if (healthPlayer <= 0){
+        gameRunning = false;
+        endMessage.textContent = "You lose!";
+        endScreen.classList.remove("hidden");
+    } else if(healthZemlja <= 0){
+        gameRunning = false;
+        endMessage.textContent = "You win!"
+        endScreen.classList.remove("hidden");
+    }
+}
+
 //--------------------------------------------------------------------PLAYER'S UPDATE METHOD--------------------------------------------------------------------------------
 let moveOnce = true;
 let alreadyHit = false;
@@ -396,10 +439,13 @@ let attacking = false;
 let grounded = true;
 let initVelY = (gravity*0.49999995231628414)/2;
 let velocityY = initVelY;
-let healthZemlja = 100;
 const hitRange = 1.1;
 
-
+function updateHealthBars(id, health, maxHealth){
+    const bar = document.getElementById(id);
+    const percent = Math.max(0, (health / maxHealth) * 100);
+    bar.style.setProperty('--health', percent + '%');
+}
 
 player.addComponent({
     update(t, dt){
@@ -407,6 +453,7 @@ player.addComponent({
         const z = npcZemljaTransform.translation;
         const razlika = s[0] - z[0];
 
+    
         if (keys.t){
             npcZemljaTransform.translation[0] -= dt;
         }
@@ -461,10 +508,14 @@ player.addComponent({
             }
 
             if(Math.abs(razlika) < hitRange && !alreadyHit) {
-                healthZemlja -= 1;
+                healthZemlja -= 10;
                 alreadyHit = true;
                 console.log("Zemlja hit! Health: " + healthZemlja);
-                setTimeout(() => { zemljaAnimator.play(1); }, 500);
+                setTimeout(() => { 
+                    zemljaAnimator.play(1);
+                    updateHealthBars("npcZemlja-health-bar", healthZemlja, maxHealth);
+                }, 500);
+                checkGameOver();
             }
 
             
@@ -526,7 +577,7 @@ player.addComponent({
         }
 
 
-
+        
     }
 });
 

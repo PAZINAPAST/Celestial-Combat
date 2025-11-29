@@ -54,3 +54,60 @@ body, html {
       0% { transform: rotate(0deg); }
     100% { transform: rotate(1800deg); }
 }
+
+.healthbar {
+    position: absolute;
+    top: 20px;
+    height: 25px;
+    width: 200px;
+    background: red;
+    border: 2px solid black;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.healthbar::after {
+    content: '';
+    display: block;
+    height: 100%;
+    background: green;
+    width: var(--health, 100%);
+    transition: width 0.3s ease;
+}
+
+.healthbar.left {
+    left: 20px;
+}
+.healthbar.right {
+    right: 20px;
+}
+
+.overlay-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    z-index: 10;
+}
+
+.overlay-screen.hidden {
+    display: none;
+}
+
+.overlay-screen h1 {
+    font-size: 3em;
+    margin-bottom: 20px;
+}
+
+.overlay-screen button {
+    padding: 10px 20px;
+    font-size: 1.2em;
+    cursor: pointer;
+}
