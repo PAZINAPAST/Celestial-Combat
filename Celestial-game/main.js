@@ -183,11 +183,12 @@ floor.addComponent(new Model({
 // we use the renderer's built-in environment skybox; do not add a cube-entity to the scene
 
 //load textures for and earth
+/*
 const imgLoader = new ImageLoader();
 const greenImg = await imgLoader.load(new URL('./models/zemlja/green.jpg', import.meta.url))
 const blueImg = await imgLoader.load(new URL('./models/zemlja/blue.jpg', import.meta.url))
 const moonImg = await imgLoader.load(new URL('./models/zemlja/moonImg.jpg', import.meta.url))
-
+*/
 //importing sonce
 let loader = new GLTFLoader();
 await loader.load(new URL('./models/sonce/sonce2.gltf', import.meta.url));
@@ -196,16 +197,19 @@ const sonceTransform = sonce.getComponentOfType(Transform);
 sonceTransform.translation = [2, -2, 0];
 
 //importing zemlja
+/*
 loader = new GLTFLoader();
-await loader.load(new URL('./models/zemlja/zemlja-proto.gltf', import.meta.url));
-const zemlja = loader.loadScene()[1];
-const luna = loader.loadScene()[2];
+await loader.load(new URL('./models/zemlja/Untitled.gltf', import.meta.url));
+const zemlja = loader.loadScene()[0];
+//const zemljaTransform = zemlja.getComponentOfType(Transform);
+//zemljaTransform.translation = [2, 0.65, 0.2];
 luna.addComponent(new Parent(zemlja));
-console.log(zemlja);
-console.log(sonce);
-
+//console.log(zemlja);
+//console.log(sonce);
+*/
 
 //adding texture image to sun and earth
+/*
 const zemljaModel = zemlja.getComponentOfType(Model);
 zemljaModel.primitives[1].material.baseTexture = new Texture({
                     image: greenImg,
@@ -235,23 +239,29 @@ lunaModel.primitives[0].material.baseTexture = new Texture({
                         addressModeU: 'clamp-to-edge',
                         addressModeV: 'clamp-to-edge',
                     })});
-
+*/
 
 //transforming objects in the scene
+/*
 const zemljaTransform = zemlja.getComponentOfType(Transform);
 const lunaTransform = luna.getComponentOfType(Transform);
 lunaTransform.translation = [0.15, 0.15, -0.2];
 lunaTransform.scale = [0.5, 0.5, 0.5];
-zemljaTransform.translation = [2, 0.65, 0.2];
-
+//zemljaTransform.translation = [2, 0.65, 0.2];
+*/
 //loading animated test object
 loader = new GLTFLoader();
 await loader.load(new URL('./models/sunAnimated2/animatedSun.gltf', import.meta.url));
 const loadedScene = loader.loadScene();
+console.log(loadedScene);
 const playerArmature = loadedScene[0];
+console.log("Player Armature: " + playerArmature);
 playerArmature.printTree();
 const player = playerArmature.children[0]; //actual mesh
+console.log("Player : " + player);
 const playerModel = player.getComponentOfType(Model);
+console.log("Player model: " + playerModel);
+
 
 //loading animation and binding them to player
 const idleAnim = loader.loadAnimation("idle", playerModel.skin);
@@ -262,6 +272,29 @@ const jumpAnim = loader.loadAnimation("jump", playerModel.skin);
 player.addComponent(new Animator([idleAnim, punchAnim, stepForwardAnim, stepBackAnim, jumpAnim]));
 
 player.isAnimated = true;
+
+//loading zemlja animated
+
+loader = new GLTFLoader();
+await loader.load(new URL('./models/zemlja/zemljaAnimation.gltf', import.meta.url));
+const loadedSceneZemlja = loader.loadScene();
+console.log(loadedSceneZemlja);
+const zemljaArmature = loadedSceneZemlja[1];
+console.log("Zemlja Armature: " + zemljaArmature);
+zemljaArmature.printTree();
+const npcZemlja = zemljaArmature.children.find(c => c.name == "earth"); //actual mesh
+const npcLuna = zemljaArmature.children[1];
+console.log("Zemlja NPC: " + npcZemlja);
+const npcZemljaModel = npcZemlja.getComponentOfType(Model);
+//const ncpLunaModel = npcLuna.getComponentOfType(Model);
+console.log("Zemlja model: " + npcZemljaModel);
+
+//loading animation and binding them to npcZemlja
+const zemljaIdleAnim = loader.loadAnimation("Idle", npcZemljaModel.skin);
+const zemljaHitAnim = loader.loadAnimation("Hit", npcZemljaModel.skin);
+npcZemlja.addComponent(new Animator([zemljaIdleAnim, zemljaHitAnim]));
+
+npcZemlja.isAnimated = true;
 
 
 //transforming player
@@ -275,8 +308,21 @@ const finalQuat = quat.create();
 quat.multiply(finalQuat, rotQuat2, rotQuat1);
 playerTransform.rotation = finalQuat;
 
+
+//transforming npcZemlja
+const npcZemljaTransform = zemljaArmature.getComponentOfType(Transform);
+npcZemljaTransform.translation = [2, -1, 0];
+const zRotQuat1 = quat.create();
+const zRotQuat2 = quat.create();
+quat.setAxisAngle(zRotQuat1, [1, 0, 0], Math.PI/2);
+quat.setAxisAngle(zRotQuat2, [0, 1, 0], -Math.PI/2);
+const zFinalQuat = quat.create();
+quat.multiply(zFinalQuat, zRotQuat2, zRotQuat1);
+npcZemljaTransform.rotation = zFinalQuat;
+
+
 //final scene
-const scene = [camera, zemlja, luna, player, /*cube2*/];
+const scene = [camera,npcZemlja, npcLuna , player, /*cube2*/];
 
 const light = new Entity();
 light.addComponent(new Light({
@@ -284,10 +330,12 @@ light.addComponent(new Light({
 }));
 scene.push(light);
 
-//adding collision detection - bounding box around each object (Physics.js file)
+//adding collision detection - bounding box around each object (Physics.js file) 
+/*
 const physics = new Physics(scene);
 for (const entity of scene) {
     const model = entity.getComponentOfType(Model);
+    console.log("Entity: " + entity.name + " Model: " + model);
     if (!model) {
         continue;
     }
@@ -304,7 +352,7 @@ for (const entity of scene) {
     //}
     
 }
-
+*/
 
 // const ma = vec3.fromValues(2.0, 2.0, 2.0);
 // const mi = vec3.fromValues(-2.0, -2.0, -2.0);
@@ -314,7 +362,7 @@ for (const entity of scene) {
 
 //defining static/non static objects
 player.customProperties = {isDynamic: true, isStatic: false}; 
-zemlja.customProperties = {isDynamic: true, isStatic: false};
+npcZemlja.customProperties = {isDynamic: true, isStatic: false};
 
 //creating AnimationSystem
 const animSystem = new AnimationSystem();
@@ -326,7 +374,7 @@ function update(time, dt) {
         }
     }
 
-    physics.update(time, dt);
+    //physics.update(time, dt);
     animSystem.update(scene, dt);
 }
 
@@ -339,22 +387,31 @@ window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
 //--------------------------------------------------------------------PLAYER'S UPDATE METHOD--------------------------------------------------------------------------------
 let moveOnce = true;
+let alreadyHit = false;
 const playerAnimator = player.getComponentOfType(Animator);
+const zemljaAnimator = npcZemlja.getComponentOfType(Animator);
 let velocityLR = 2.0;
 let gravity = 50.0;
 let attacking = false;
 let grounded = true;
 let initVelY = (gravity*0.49999995231628414)/2;
 let velocityY = initVelY;
+let healthZemlja = 100;
+const hitRange = 1.1;
+
+
 
 player.addComponent({
     update(t, dt){
+        const s = playerTransform.translation;
+        const z = npcZemljaTransform.translation;
+        const razlika = s[0] - z[0];
 
         if (keys.t){
-            zemljaTransform.translation[0] -= dt;
+            npcZemljaTransform.translation[0] -= dt;
         }
         if (keys.y){
-            zemljaTransform.translation[0] += dt;
+            npcZemljaTransform.translation[0] += dt;
         }
         //moving right
         if (keys.d && attacking == false){
@@ -362,7 +419,13 @@ player.addComponent({
             if (moveOnce){
                 playerAnimator.play(2);
                 moveOnce = false;
+
+                //const s = playerTransform.translation;
+                //const z = zemljaTransform.translation;
+                //console.log(s);
+                //console.log(z);
             }  
+            
         }
 
         //moving left
@@ -394,7 +457,16 @@ player.addComponent({
             if (grounded){
                 playerAnimator.play(1);
                 attacking = true;
+                
             }
+
+            if(Math.abs(razlika) < hitRange && !alreadyHit) {
+                healthZemlja -= 1;
+                alreadyHit = true;
+                console.log("Zemlja hit! Health: " + healthZemlja);
+                setTimeout(() => { zemljaAnimator.play(1); }, 500);
+            }
+
             
         }
 
@@ -403,14 +475,52 @@ player.addComponent({
             moveOnce = true;
             grounded = true;    
             attacking = false;
+            alreadyHit = false;
 
-            console.log("grounded true");
+            console.log("grounded true");/*
+            const s = playerTransform.translation;
+            const z = zemljaTransform.translation;
+            const razlika = s[0] - z[0];
+            console.log(s);
+            console.log(z);
+            console.log(Math.abs(razlika));*/
+            //console.log("popoppop");
+            console.log("Zemlja health: " + healthZemlja);
             if (playerTransform.translation[1] != -1){
                 console.log("correcting y-position");
                 playerTransform.translation[1] = -1;
             } 
             if (!keys.a && !keys.d && !keys.w){ //zato da objekt ne gre za 1 frame v idle mode potem pa ze v nek movind animation ce drzimo nek gumb
                 playerAnimator.play(0);
+                //zemljaAnimator.play(0);
+            }
+            
+        }
+
+
+        if (!zemljaAnimator.playing){
+            moveOnce = true;
+            grounded = true;    
+            attacking = false;
+            alreadyHit = false;
+
+            //console.log("grounded true");
+            /*
+            const s = playerTransform.translation;
+            const z = zemljaTransform.translation;
+            const razlika = s[0] - z[0];
+            console.log(s);
+            console.log(z);
+            console.log(Math.abs(razlika));*/
+            //console.log("popoppop");
+            //console.log("Zemlja health: " + healthZemlja);
+           /* if (playerTransform.translation[1] != -1){
+                console.log("correcting y-position");
+                playerTransform.translation[1] = -1;
+            } */
+            if (!keys.a && !keys.d && !keys.w){ //zato da objekt ne gre za 1 frame v idle mode potem pa ze v nek movind animation ce drzimo nek gumb
+                //playerAnimator.play(0);
+                zemljaAnimator.play(0);
             }
             
         }
