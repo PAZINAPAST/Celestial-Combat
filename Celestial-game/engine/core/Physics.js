@@ -56,23 +56,40 @@ export class Physics {
 
     resolveCollision(a, b) {
         // Get global space AABBs.
+        //warning, ugly code ahead
         let initScale;
         let parentTransform;
+        let scalingFac = [0.2, 0.2, 0.2];
         if (a.isAnimated){
             const a_parent = a.getComponentOfType(Parent).entity;
             parentTransform = a_parent.getComponentOfType(Transform);
             initScale = parentTransform.scale;
-            parentTransform.scale = [0.1, 0.1, 0.1];
+            parentTransform.scale = scalingFac;
         }
+
+        let initScale2;
+        let parentTransform2;
+
+        if (b.isAnimated){
+            const b_parent = b.getComponentOfType(Parent).entity;
+            parentTransform2 = b_parent.getComponentOfType(Transform);
+            initScale2 = parentTransform2.scale;
+            parentTransform2.scale = scalingFac;
+        }
+        
 
         if (!a.aabb) { console.warn('No AABB for', a.name); return; }
         if (!b.aabb) { console.warn('No AABB for', b.name); return; }
 
         const aBox = this.getTransformedAABB(a);
+        const bBox = this.getTransformedAABB(b);
         if (a.isAnimated){
             parentTransform.scale = initScale;
         }
-        const bBox = this.getTransformedAABB(b);
+        if (b.isAnimated){
+            parentTransform2.scale = initScale2;
+        }
+        
 
         // Check if there is collision.
         const isColliding = this.aabbIntersection(aBox, bBox);
