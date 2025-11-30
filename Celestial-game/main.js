@@ -151,7 +151,7 @@ cube2.addComponent(new Model({
         })
     ]
 }));
-cube2.customProperties = {isDynamic: false, isStatic: true};
+cube2.customProperties = {isDynamic: true, isStatic: false};
 const cubeTransform = cube2.getComponentOfType(Transform);
 cubeTransform.scale = [0.5, 2, 0.5];
 
@@ -204,9 +204,14 @@ const zemlja = loader.loadScene()[0];
 //const zemljaTransform = zemlja.getComponentOfType(Transform);
 //zemljaTransform.translation = [2, 0.65, 0.2];
 luna.addComponent(new Parent(zemlja));
+<<<<<<< Updated upstream
 //console.log(zemlja);
 //console.log(sonce);
 */
+=======
+
+
+>>>>>>> Stashed changes
 
 //adding texture image to sun and earth
 /*
@@ -247,11 +252,17 @@ const zemljaTransform = zemlja.getComponentOfType(Transform);
 const lunaTransform = luna.getComponentOfType(Transform);
 lunaTransform.translation = [0.15, 0.15, -0.2];
 lunaTransform.scale = [0.5, 0.5, 0.5];
+<<<<<<< Updated upstream
 //zemljaTransform.translation = [2, 0.65, 0.2];
 */
+=======
+zemljaTransform.translation = [2, 0.65, 0.2];
+
+//-------------------------------------ANIMATED PLAYER--------------------------------------------------------
+>>>>>>> Stashed changes
 //loading animated test object
 loader = new GLTFLoader();
-await loader.load(new URL('./models/sunAnimated2/animatedSun.gltf', import.meta.url));
+await loader.load(new URL('./models/sunAnimated3/animatedSun3.gltf', import.meta.url));
 const loadedScene = loader.loadScene();
 console.log(loadedScene);
 const playerArmature = loadedScene[0];
@@ -265,14 +276,15 @@ console.log("Player model: " + playerModel);
 
 //loading animation and binding them to player
 const idleAnim = loader.loadAnimation("idle", playerModel.skin);
-const punchAnim = loader.loadAnimation("shortPunch", playerModel.skin);
-const stepForwardAnim = loader.loadAnimation("stepForwardFast", playerModel.skin);
-const stepBackAnim = loader.loadAnimation("stepBackFast", playerModel.skin);
-const jumpAnim = loader.loadAnimation("jump", playerModel.skin);
-player.addComponent(new Animator([idleAnim, punchAnim, stepForwardAnim, stepBackAnim, jumpAnim]));
+const punchAnim = loader.loadAnimation("punchBlended", playerModel.skin);
+const stepForwardAnim = loader.loadAnimation("stepForwardBlended", playerModel.skin);
+const stepBackAnim = loader.loadAnimation("stepBackBlended", playerModel.skin);
+const jumpAnim = loader.loadAnimation("jumpBlended", playerModel.skin);
+player.addComponent(new Animator([idleAnim, punchAnim, stepForwardAnim, stepBackAnim, jumpAnim]));  //dodajanje vseh animacij v player-ja
 
 player.isAnimated = true;
 
+<<<<<<< Updated upstream
 //loading zemlja animated
 
 loader = new GLTFLoader();
@@ -296,6 +308,9 @@ npcZemlja.addComponent(new Animator([zemljaIdleAnim, zemljaHitAnim]));
 
 npcZemlja.isAnimated = true;
 
+=======
+console.log(playerArmature);
+>>>>>>> Stashed changes
 
 //transforming player
 const playerTransform = playerArmature.getComponentOfType(Transform);
@@ -307,6 +322,7 @@ quat.setAxisAngle(rotQuat2, [0, 1, 0], Math.PI/2);
 const finalQuat = quat.create();
 quat.multiply(finalQuat, rotQuat2, rotQuat1);
 playerTransform.rotation = finalQuat;
+//----------------------------------------------------------------------------------------------------------------------
 
 
 //transforming npcZemlja
@@ -333,6 +349,7 @@ scene.push(light);
 //adding collision detection - bounding box around each object (Physics.js file) 
 /*
 const physics = new Physics(scene);
+
 for (const entity of scene) {
     const model = entity.getComponentOfType(Model);
     console.log("Entity: " + entity.name + " Model: " + model);
@@ -362,7 +379,11 @@ for (const entity of scene) {
 
 //defining static/non static objects
 player.customProperties = {isDynamic: true, isStatic: false}; 
+<<<<<<< Updated upstream
 npcZemlja.customProperties = {isDynamic: true, isStatic: false};
+=======
+zemlja.customProperties = {isDynamic: false, isStatic: true};
+>>>>>>> Stashed changes
 
 //creating AnimationSystem
 const animSystem = new AnimationSystem();
@@ -437,7 +458,7 @@ let velocityLR = 2.0;
 let gravity = 50.0;
 let attacking = false;
 let grounded = true;
-let initVelY = (gravity*0.49999995231628414)/2;
+let initVelY = (gravity*(1.1333333253860474-2*0.3))/2; //ta cifra je dolzina skoka v sekundah (animLen - 2*odmik)
 let velocityY = initVelY;
 const hitRange = 1.1;
 
@@ -494,7 +515,7 @@ player.addComponent({
         }
 
         //jumping (actually moving up-down)
-        if (playerAnimator.playingAnim == 4 && playerAnimator.time > 0.4 && playerAnimator.time < playerAnimator.animLen - 0.4){
+        if (playerAnimator.playingAnim == 4 && playerAnimator.time > 0.3 && playerAnimator.time < playerAnimator.animLen - 0.3){
             velocityY -= gravity*dt;
             playerTransform.translation[1] += velocityY*dt;
         }

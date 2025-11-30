@@ -18,6 +18,7 @@ export class Animator {
         this.playing = true;
         this.playingAnim = index;
         this.animLen = this.animations[index].maxTime;
+        //console.log("trajanje animacije: " + this.animLen)
     }
 
     update1(dt) {

@@ -543,7 +543,10 @@ export class GLTFLoader {
     //loadamo animacijo pri indeksu
     loadAnimation(nameOrIndex) {
         const gltfSpec = this.findByNameOrIndex(this.gltf.animations, nameOrIndex);
-        if (!gltfSpec) return null;
+        if (!gltfSpec){
+            console.log("no animation with name: " + nameOrIndex + " found")
+            return null;
+        }
 
         const animation = {
             name: gltfSpec.name ?? 'Unnamed',
