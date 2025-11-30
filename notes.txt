@@ -1,16 +1,10 @@
-Entiteta1: Camera, Translation   #pravokotna porjekcija, premik le po potrebi če pride karakter izven vidnega polja
-Entitea2: Light, Translation    #nad fighterjema, (mogoče bo luč tudi glava sonca)
-Entiteta3: fighter 1, Animacija, Translation, Model, Material, contorls  #normalen udarec, charge udarec(majhen dash), premik levo desno, jump {}
-Entiteta4: fighter 2, Animacija, Translation, Model, Material, npc	# normalen udarec, charge udarec(majhen dash), jump {mogoče luč} 
-Entiteta5: Healthbar
-Enititeta5: odzadje, trasnation
-Entiteta6: tla
-
-{UI start}
-
-
-
-
-naloga1: poglej si animacije
-naloga2: poglej si user interface v WEBGPU
-nloga3: dodaj objekte in luči tko sam za referenco
+1.dodaj animacije  // Matej
+2. obračanje karakterjev // Matej
+3. zemlja naredi npc obnašanje, Če bo izgledalo slabo do 2player game //Jan
+4.(vsak svoj power move)
+5. premikanje kamere z playerjem (kamera naj se premika tako, da bo player vedno v vidnem polju ne pa nujno na sredini) //Gaja
+6. premakni luč (nad karakterja ne za njiju tako kot je zdaj. Premakni malo sceno in boš vidla kaj mislim) // Gaja
+7. skybox uredi da bo večji // Jan
+8. čiščenje animacij //Matej
+9. collison box // Matej
+10. polepšaj starting screen in end screen //gaja
