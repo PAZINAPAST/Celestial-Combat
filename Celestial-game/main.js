@@ -205,13 +205,11 @@ const zemlja = loader.loadScene()[0];
 //zemljaTransform.translation = [2, 0.65, 0.2];
 luna.addComponent(new Parent(zemlja));
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 //console.log(zemlja);
 //console.log(sonce);
 */
-=======
 
-
->>>>>>> Stashed changes
 
 //adding texture image to sun and earth
 /*
@@ -255,11 +253,8 @@ lunaTransform.scale = [0.5, 0.5, 0.5];
 <<<<<<< Updated upstream
 //zemljaTransform.translation = [2, 0.65, 0.2];
 */
-=======
-zemljaTransform.translation = [2, 0.65, 0.2];
 
 //-------------------------------------ANIMATED PLAYER--------------------------------------------------------
->>>>>>> Stashed changes
 //loading animated test object
 loader = new GLTFLoader();
 await loader.load(new URL('./models/sunAnimated3/animatedSun3.gltf', import.meta.url));
@@ -284,7 +279,6 @@ player.addComponent(new Animator([idleAnim, punchAnim, stepForwardAnim, stepBack
 
 player.isAnimated = true;
 
-<<<<<<< Updated upstream
 //loading zemlja animated
 
 loader = new GLTFLoader();
@@ -308,9 +302,7 @@ npcZemlja.addComponent(new Animator([zemljaIdleAnim, zemljaHitAnim]));
 
 npcZemlja.isAnimated = true;
 
-=======
 console.log(playerArmature);
->>>>>>> Stashed changes
 
 //transforming player
 const playerTransform = playerArmature.getComponentOfType(Transform);
@@ -379,11 +371,10 @@ for (const entity of scene) {
 
 //defining static/non static objects
 player.customProperties = {isDynamic: true, isStatic: false}; 
-<<<<<<< Updated upstream
 npcZemlja.customProperties = {isDynamic: true, isStatic: false};
-=======
-zemlja.customProperties = {isDynamic: false, isStatic: true};
->>>>>>> Stashed changes
+// zemlja.customProperties = {isDynamic: false, isStatic: true};
+// zemlja.customProperties = {isDynamic: false, isStatic: true};
+
 
 //creating AnimationSystem
 const animSystem = new AnimationSystem();
