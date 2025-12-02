@@ -355,17 +355,29 @@ function checkGameOver(){
 
 //--------------------------------------------------------------------PLAYER'S UPDATE METHOD--------------------------------------------------------------------------------
 let moveOnce = true;
-let alreadyHit = false;
+let moveOnceZemlja = true;
+let alreadyHitSonce = false;
+let alreadyHitZemlja = false;
 const playerAnimator = player.getComponentOfType(Animator);
 const zemljaAnimator = npcZemlja.getComponentOfType(Animator);
 let velocityLR = 2.0;
 let gravity = 50.0;
 let attacking = false;
 let grounded = true;
-let blocking = true;
+let blocking = false;
 let initVelY = (gravity*(1.1333333253860474-2*0.3))/2; //ta cifra je dolzina skoka v sekundah (animLen - 2*odmik)
 let velocityY = initVelY;
 const hitRange = 1.1;
+const kickRange = 1.5;
+// zemlja variables
+let zemljaMoveOnce = true;
+let decisionTimer = 0;
+let zemljaAction = "idle";
+let zemljaAttacking = false;
+let zemljaBlocking = false;
+let zemljaJumping = false;
+let zemljaVelocity = initVelY;
+let zemljaPremik = 2;
 
 function updateHealthBars(id, health, maxHealth){
     const bar = document.getElementById(id);
@@ -382,7 +394,7 @@ player.addComponent({
         const s = playerTransform.translation;
         const z = npcZemljaTransform.translation;
         const razlika = s[0] - z[0];
-
+        //console.log("payer animation playing: "+ playerAnimator.playing);
     
         if (keys.t){
             npcZemljaTransform.translation[0] -= dt;
@@ -436,14 +448,14 @@ player.addComponent({
                 attacking = true;
             }
 
-            if(Math.abs(razlika) < hitRange && !alreadyHit) {
+            if(Math.abs(razlika) < hitRange && !alreadyHitZemlja) {
                 healthZemlja -= 10;
-                alreadyHit = true;
+                alreadyHitZemlja = true;
                 console.log("Zemlja hit! Health: " + healthZemlja);
                 setTimeout(() => { 
                     zemljaAnimator.play(1);
                     updateHealthBars("npcZemlja-health-bar", healthZemlja, maxHealth);
-                }, 500);
+                }, 100);
                 checkGameOver();
             }
 
@@ -477,7 +489,8 @@ player.addComponent({
             moveOnce = true;
             grounded = true;    
             attacking = false;
-            alreadyHit = false;
+            alreadyHitZemlja = false;
+            blocking = false;
 
             console.log("grounded true");/*
             const s = playerTransform.translation;
@@ -498,7 +511,7 @@ player.addComponent({
             }
             
         }
-
+        /*
         //brezvezen test da vidim ce animacije za zemljo delajo
         if (keys.j){
             zemljaAnimator.play(5);
@@ -525,17 +538,233 @@ player.addComponent({
            /* if (playerTransform.translation[1] != -1){
                 console.log("correcting y-position");
                 playerTransform.translation[1] = -1;
-            } */
+            } */ /*
+            if (!keys.a && !keys.d && !keys.w){ //zato da objekt ne gre za 1 frame v idle mode potem pa ze v nek movind animation ce drzimo nek gumb
+                //playerAnimator.play(0);
+                zemljaAnimator.play(0);
+            }*/
+            
+        
+
+
+
+        
+    }
+});
+
+npcZemlja.addComponent({
+    update(t, dt) {
+        decisionTimer -= dt;
+        console.log("decisionTimer: " + decisionTimer);
+
+        const s = playerTransform.translation;
+        const z = npcZemljaTransform.translation;
+        const razlika = Math.abs(s[0] - z[0]);
+        console.log("ralika: "+ razlika);
+
+        
+        //console.log("razlika:"+ razlika);
+        //console.log("animator playing: "+ zemljaAnimator.playing);
+
+        
+        if(decisionTimer <= 0 && !zemljaAnimator.playing) {
+            // popravi dejanja
+            //console.log("zgodi se neka anmiacija");
+
+            decisionTimer = 0.1 + Math.random() * 0.1;
+            const r = Math.random();
+            //zemljaAnimator.play(0);
+            console.log("random: " + r);
+
+            // v rangeu za vse ounche razmerje je 30% blokada, 30% napad(15 punch, 15 super punch), 30% odmik, 10% jump 
+            if(razlika <= hitRange) {
+                if(r <= 0.1) {
+                    zemljaAction = "jump";
+                } else if(r <= 0.4) {
+                    zemljaAction = "block";
+                } else if(r <= 0.55) {
+                    zemljaAction = "punch";                   
+                } else if(r <= 0.7) {
+                    zemljaAction = "superPunch";
+                } else {
+                    zemljaAction = "retreat";
+                }
+            } else if(razlika <= kickRange) { // 30% block, 15% advance, 15% retreat, 30% attack, 10% jump
+                if(r <= 0.3) {
+                    zemljaAction = "block";
+                } else if(r <= 0.45) {
+                    zemljaAction = "advance";
+                } else if(r <= 0.6) {
+                    zemljaAction = "retreat";
+                } else if(r <= 0.9) {
+                    zemljaAction = "kick";
+                } else {
+                    zemljaAction = "jump";
+                }
+            } else{ // 30% idle, 40% advance, 10% jump, 10% block, 
+                if(r <= 0.1) {
+                    zemljaAction = "jump";
+                } else if(r <= 0.2) {
+                    zemljaAction = "block";
+                } else if (r <= 0.3) {
+                    zemljaAction = "kick";
+                } else if(r <= 0.6) {
+                    zemljaAction = "idle";
+                } else {
+                    zemljaAction = "advance";
+                }
+            }
+
+
+            switch(zemljaAction) {
+            case "idle":
+               zemljaAnimator.play(0);
+                break;
+            case "advance":
+                zemljaAnimator.play(2);
+                break;
+            case "retreat":
+                zemljaAnimator.play(3);
+                break;
+            case "jump":
+                zemljaAnimator.play(4);
+                zemljaJumping = true;
+                zemljaVelocity = initVelY;
+                break;
+            case "block":
+                zemljaAnimator.play(5);
+                zemljaBlocking = true;
+                break;
+            case "punch":
+                zemljaAnimator.play(6);
+                zemljaAttacking = true;
+                alreadyHitSonce = false;
+                break;
+            case "superPunch":
+                zemljaAnimator.play(7);
+                zemljaAttacking = true;
+                //alreadyHitSonce = false;
+                break;
+            case "kick":
+                zemljaAnimator.play(8);
+                zemljaAttacking = true;
+                break;
+            
+        }
+              
+
+        }
+
+
+        if(zemljaAnimator.playingAnim == 2 && zemljaAction == "advance") {
+
+            if (zemljaAnimator.time > 0.2 && zemljaAnimator.time < zemljaAnimator.animLen - 0.2) {
+                npcZemljaTransform.translation[0] -= zemljaPremik * dt;
+            }
+        }
+
+        if(zemljaAnimator.playingAnim == 3 && zemljaAction == "retreat") {
+            
+            if (zemljaAnimator.time > 0.2 && zemljaAnimator.time < zemljaAnimator.animLen - 0.2) {
+                npcZemljaTransform.translation[0] += zemljaPremik * dt;
+            }
+            //zemljaMoveOnce = false;
+        }
+
+        if (zemljaAnimator.playingAnim == 4 && zemljaJumping && zemljaAnimator.time > 0.3 && zemljaAnimator.time < zemljaAnimator.animLen - 0.3 ){
+    
+            zemljaVelocity -= gravity*dt;
+            npcZemljaTransform.translation[1] += zemljaVelocity*dt;
+
+            if(npcZemljaTransform.translation[1] <= -1) {
+                npcZemljaTransform.translation[1] = -1;
+                zemljaJumping = false;
+            }
+
+        }
+
+        if (zemljaAnimator.playingAnim == 6 && zemljaAttacking && !blocking && Math.abs(razlika) <= hitRange) {
+
+        if (!alreadyHitSonce && zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5) {
+            healthPlayer -= 10;
+            alreadyHitSonce = true; // mark that hit connected
+            playerAnimator.play(1); // force hit reaction
+            updateHealthBars("player-health-bar", healthPlayer, maxHealth);
+            checkGameOver();
+        }
+}
+
+
+        if(!zemljaAnimator.playing && zemljaAttacking) {
+            zemljaAttacking = false;
+            alreadyHitSonce = false;
+        }
+        
+        //[zemljaIdleAnim: 0, zemljaHitAnim: 1, zemljaStepForward: 2, zemljaStepBack: 3, zemljaJump: 4, zemljaBlock: 5, zemljaPunchAnim,: 6 zemljaHookPunch: 7, zemljaKick: 8]
+
+        //izvajaj trenutno animacijo
+        //if(zemljaAction == "idle") {
+          //  console.log("dogaja se animacija");
+            //zemljaAnimator.play(0);
+        //}
+
+        
+
+        /*
+        switch(zemljaAction) {
+            case "idle":
+                zemljaAnimator.play(0);
+                break;
+            case "advance":
+                zemljaAnimator.play(2);
+                npcZemljaTransform.translation[0] += velocityLR * dt;
+                break;
+            case "retreat":
+                zemljaAnimator.play(3);
+                npcZemljaTransform.translation[0] -= velocityLR * dt;
+                break;
+            case "jump":
+                zemljaVelocity = initVelY;
+                zemljaAnimator.play(4);
+                zemljaJumping = true;
+                break;
+            case "block":
+                zemljaAnimator.play(5);
+                zemljaBlocking = true;
+                break;
+            case "punch":
+                zemljaAnimator.play(6);
+                zemljaAttacking = true;
+                break;
+            case "superPunch":
+                zemljaAnimator.play(7);
+                zemljaAttacking = true;
+                break;
+            case "kick":
+                zemljaAnimator.play(8);
+                zemljaAttacking = true;
+                break;
+            
+        }*/
+        
+        /*
+        if (!zemljaAnimator.playing){
+            moveOnceZemlja = true;
+            grounded = true;    
+            attacking = false;
+            alreadyHit = false;
+            blocking = false;
+
+           
             if (!keys.a && !keys.d && !keys.w){ //zato da objekt ne gre za 1 frame v idle mode potem pa ze v nek movind animation ce drzimo nek gumb
                 //playerAnimator.play(0);
                 zemljaAnimator.play(0);
             }
             
-        }
-
-
+        }*/
         
     }
+
 });
 
 function render() {
