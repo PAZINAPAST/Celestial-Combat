@@ -10,9 +10,9 @@ export class Physics {
 
     update(t, dt) {
         for (const entity of this.scene) {
-            if (entity.customProperties?.isDynamic) {
+            if (entity.customProperties?.isDynamic || entity.customProperties?.isStatic) {
                 for (const other of this.scene) {
-                    if (entity !== other && other.customProperties?.isStatic) {
+                    if (entity !== other && (other.customProperties?.isStatic || other.customProperties?.isDynamic)) {
                         this.resolveCollision(entity, other);
                     }
                 }
@@ -56,49 +56,44 @@ export class Physics {
 
     resolveCollision(a, b) {
         // Get global space AABBs.
-        //warning, ugly code ahead
-        let initScale;
-        let parentTransform;
-        let scalingFac = [0.2, 0.2, 0.2];
-        if (a.isAnimated){
-            const a_parent = a.getComponentOfType(Parent).entity;
-            parentTransform = a_parent.getComponentOfType(Transform);
-            initScale = parentTransform.scale;
-            parentTransform.scale = scalingFac;
-        }
 
-        let initScale2;
-        let parentTransform2;
-
-        if (b.isAnimated){
-            const b_parent = b.getComponentOfType(Parent).entity;
-            parentTransform2 = b_parent.getComponentOfType(Transform);
-            initScale2 = parentTransform2.scale;
-            parentTransform2.scale = scalingFac;
-        }
-        
 
         if (!a.aabb) { console.warn('No AABB for', a.name); return; }
         if (!b.aabb) { console.warn('No AABB for', b.name); return; }
 
-        const aBox = this.getTransformedAABB(a);
-        const bBox = this.getTransformedAABB(b);
-        if (a.isAnimated){
-            parentTransform.scale = initScale;
-        }
-        if (b.isAnimated){
-            parentTransform2.scale = initScale2;
-        }
-        
+        // const aBox = this.getTransformedAABB(a);
+        // const bBox = this.getTransformedAABB(b);
+
+        //spodnja koda naredi to, da vzame bounding box obeh objektov, ga zmanjsa (skalira) za nek faktor in nato premakne glede na translation objekta
+        const a_position = a.getComponentOfType(Parent).entity.getComponentOfType(Transform).translation;
+        const b_position = b.getComponentOfType(Parent).entity.getComponentOfType(Transform).translation;
+        const a_moved_aabb_min = [...a.aabb.min];  //... - pomeni da gremo cez vse elemente tega arraya in ustvarimo nov array z isto vsebino 
+        const a_moved_aabb_max = [...a.aabb.max];
+        const b_moved_aabb_min = [...b.aabb.min];
+        const b_moved_aabb_max = [...b.aabb.max];
+
+        let factor1 = 0.8;
+        vec3.multiply(a_moved_aabb_max, a_moved_aabb_max, [factor1, 1, factor1]);
+        vec3.multiply(a_moved_aabb_min, a_moved_aabb_min, [factor1, 1, factor1]);
+        vec3.multiply(b_moved_aabb_max, b_moved_aabb_max, [factor1, 1, factor1]);
+        vec3.multiply(b_moved_aabb_min, b_moved_aabb_min, [factor1, 1, factor1]);
+
+
+        vec3.add(a_moved_aabb_min, a_moved_aabb_min, a_position);
+        vec3.add(a_moved_aabb_max, a_moved_aabb_max, a_position);
+        vec3.add(b_moved_aabb_min, b_moved_aabb_min, b_position);
+        vec3.add(b_moved_aabb_max, b_moved_aabb_max, b_position);
+
+
+        const aBox = {min: a_moved_aabb_min, max: a_moved_aabb_max};
+        const bBox = {min: b_moved_aabb_min, max: b_moved_aabb_max};
 
         // Check if there is collision.
         const isColliding = this.aabbIntersection(aBox, bBox);
         if (!isColliding) {
             return;
         }
-        console.log("collision between: " + a.name + " and " + b.name);
-        console.log(a.aabb);
-        console.log(aBox);
+
         // Move entity A minimally to avoid collision.
         const diffa = vec3.sub(vec3.create(), bBox.max, aBox.min);
         const diffb = vec3.sub(vec3.create(), aBox.max, bBox.min);
@@ -130,20 +125,59 @@ export class Physics {
             minDirection = [0, 0, -minDiff];
         }
 
-        let transform;
+        let transform_a;
+        let transform_b;
 
         if (a.isAnimated){
-            transform = a.getComponentOfType(Parent).entity.getComponentOfType(Transform);
+            transform_a = a.getComponentOfType(Parent).entity.getComponentOfType(Transform);
         } else{
-            transform = a.getComponentOfType(Transform);
+            transform_a = a.getComponentOfType(Transform);
         }
 
-        if (!transform) {
+        if (b.isAnimated){
+            transform_b = b.getComponentOfType(Parent).entity.getComponentOfType(Transform);
+        } else{
+            transform_b = b.getComponentOfType(Transform);
+        }
+
+        if (!transform_a || !transform_b) {
             console.log("no transform found");
             return;
         }
 
-        vec3.add(transform.translation, transform.translation, minDirection);
+        //aconsole.log(minDirection);
+
+        //ce sta oba objekta dinamicna
+        // if (a.customProperties.isDynamic && b.customProperties.isDynamic){
+        //     console.log("here");
+        //     vec3.multiply(minDirection, minDirection, [0.5, 0.5, 0.5]);
+        //     vec3.add(transform_a.translation, transform_a.translation, minDirection);
+        //     vec3.multiply(minDirection, minDirection, [-1, -1, -1]);
+        //     vec3.add(transform_b.translation, transform_b.translation, minDirection);
+        // } 
+
+        minDirection[1] = 0;
+        minDirection[2] = 0;
+
+        vec3.multiply(minDirection, minDirection, [0.5, 0.5, 0.5]);
+        vec3.add(transform_a.translation, transform_a.translation, minDirection);
+        vec3.multiply(minDirection, minDirection, [-1, -1, -1]);
+        vec3.add(transform_b.translation, transform_b.translation, minDirection);
+        
+        //ce je samo en objekt dinamicen
+        // else{ 
+        //     //premaknemo objekt-a ker je dinamicen
+        //     if (a.customProperties.isDynamic){
+        //         vec3.add(transform_a.translation, transform_a.translation, minDirection);
+        //     } 
+        //     //premaknemo objekt-b ker je dinamicen
+        //     else{ 
+        //         vec3.add(transform_b.translation, transform_b.translation, minDirection);
+        //     }
+            
+        // }
+
+        
     }
 
 }

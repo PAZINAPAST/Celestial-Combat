@@ -3,7 +3,7 @@ import { UpdateSystem } from 'engine/systems/UpdateSystem.js';
 
 //import { UnlitRenderer } from 'engine/renderers/UnlitRenderer.js';
 import { SkyBoxRenderer } from 'engine/renderers/SkyBoxRenderer.js';
-//import { TouchController } from 'engine/controllers/TouchController.js';
+import { TouchController } from 'engine/controllers/TouchController.js';
 
 import {
     Camera,
@@ -117,9 +117,9 @@ model2.addComponent(new Model({
 const camera = new Entity();
 camera.addComponent(new Transform({translation : [0, 0, 5]}));
 camera.addComponent(new Camera());
-//camera.addComponent(new TouchController(camera, canvas, {
-  //  distance: 5,
-//}));
+camera.addComponent(new TouchController(camera, canvas, {
+   distance: 5,
+}));
 
 const cube1Resources = await loadResources({
     mesh: new URL('../../../models/cube/cube.json', import.meta.url),
@@ -166,7 +166,7 @@ sonceTransform.translation = [2, -2, 0];
 //-------------------------------------------------------ANIMATED SUN--------------------------------------------------------------------
 //loading animated test object
 loader = new GLTFLoader();
-await loader.load(new URL('./models/sunAnimated4/animatedSun4.gltf', import.meta.url));
+await loader.load(new URL('./models/sunAnimated6/animatedSun6.gltf', import.meta.url));
 const loadedScene = loader.loadScene();
 console.log(loadedScene);
 const playerArmature = loadedScene[0];
@@ -187,15 +187,17 @@ const jumpAnim = loader.loadAnimation("jumpBlended", playerModel.skin);
 const hookPunchBlended = loader.loadAnimation("hookPunchBlended", playerModel.skin);
 const block = loader.loadAnimation("block", playerModel.skin);
 const kickBlended = loader.loadAnimation("kickBlended", playerModel.skin);
-player.addComponent(new Animator([idleAnim, punchBlended, stepForwardBlended, stepBackBlended, jumpAnim, hookPunchBlended, block, kickBlended]));  //dodajanje vseh animacij v player-ja
+const hit = loader.loadAnimation("hitBlended", playerModel.skin);
+const hitKnockback = loader.loadAnimation("hitStepBackBlended", playerModel.skin);
+player.addComponent(new Animator([idleAnim, punchBlended, stepForwardBlended, stepBackBlended, jumpAnim, hookPunchBlended, block, kickBlended, hit, hitKnockback]));  //dodajanje vseh animacij v player-ja
 
 player.isAnimated = true;
 
 //transforming player
 const playerTransform = playerArmature.getComponentOfType(Transform);
 playerTransform.translation = [-2, -1, 0];
-const rotQuat1 = quat.create();
-const rotQuat2 = quat.create();
+let rotQuat1 = quat.create();
+let rotQuat2 = quat.create();
 quat.setAxisAngle(rotQuat1, [1, 0, 0], Math.PI/2);
 quat.setAxisAngle(rotQuat2, [0, 1, 0], Math.PI/2);
 const finalQuat = quat.create();
@@ -206,7 +208,7 @@ console.log(playerArmature);
 
 //-------------------------------------------------------ANIMATED EARTH--------------------------------------------------------------------
 loader = new GLTFLoader();
-await loader.load(new URL('./models/zemljaAnimated0/zemljaAnimated0.gltf', import.meta.url));
+await loader.load(new URL('./models/zemljaAnimated1/zemljaAnimated0.gltf', import.meta.url));
 const loadedSceneZemlja = loader.loadScene();
 console.log(loadedSceneZemlja);
 const zemljaArmature = loadedSceneZemlja[1];
@@ -247,9 +249,12 @@ quat.multiply(zFinalQuat, zRotQuat2, zRotQuat1);
 npcZemljaTransform.rotation = zFinalQuat;
 //----------------------------------------------------------------------------------------------------------------------------------
 
+//adding game manager
+const gameManager = new Entity([], "gameManager");
+
 
 //final scene
-const scene = [camera, npcZemlja, npcLuna , player, /*cube2*/];
+const scene = [camera, npcZemlja, npcLuna , player, gameManager/*cube2*/];
 
 const light = new Entity();
 light.addComponent(new Light({
@@ -285,8 +290,7 @@ for (const entity of scene) {
 //defining static/non static objects
 player.customProperties = {isDynamic: true, isStatic: false}; 
 npcZemlja.customProperties = {isDynamic: false, isStatic: true};
-// zemlja.customProperties = {isDynamic: false, isStatic: true};
-// zemlja.customProperties = {isDynamic: false, isStatic: true};
+
 
 
 //creating AnimationSystem
@@ -353,6 +357,56 @@ function checkGameOver(){
     }
 }
 
+//--------------------------------------------------------------------GAME MANAGER---------------------------------------------------------------------------------------------
+let playerLeft = true;
+rotQuat1 = quat.create();
+rotQuat2 = quat.create();
+let rotQuat3 = quat.create();
+quat.setAxisAngle(rotQuat1, [1, 0, 0], Math.PI/2);
+quat.setAxisAngle(rotQuat2, [0, 1, 0], Math.PI/2); //facing right
+quat.setAxisAngle(rotQuat3, [0, 1, 0], -Math.PI/2); //facing left
+let faceLeft = quat.create();
+let faceRight = quat.create();
+faceRight = quat.multiply(faceRight, rotQuat2, rotQuat1);
+faceLeft = quat.multiply(faceLeft, rotQuat3, rotQuat1);
+
+let sunPosBefore = playerTransform.translation[0];
+let earthPosBefore = npcZemljaTransform.translation[0];
+
+gameManager.addComponent({
+    update(t, dt){
+
+        //player je na levi strani
+        if (playerTransform.translation[0] < npcZemljaTransform.translation[0]){
+            playerTransform.rotation = faceRight;
+            npcZemljaTransform.rotation = faceLeft;
+
+        } else{ //player je na desni
+            playerTransform.rotation = faceLeft;
+            npcZemljaTransform.rotation = faceRight;
+        }
+
+        //ce se zgodi da sonce ali zemlja nista na z = 0, potem popravi (te se for some reason lahko zgodi ko hoce player skociti cez zemljo)
+        if (playerTransform.translation[2] != 0) {playerTransform.translation[2] = 0}
+        if (npcZemljaTransform.translation[2] != 0) {npcZemljaTransform.translation[2] = 0}
+
+        // //preverimo ali se je character premaknil glede na prejsnji frame - ce se je, ga nastavimo kot dinamicnega, v nasprotnem primeru pa kot staticnega
+        // if (sunPosBefore != playerTransform.translation[0]){
+        //     player.customProperties = {isDynamic: true, isStatic: false};
+        // } else{
+        //     player.customProperties = {isDynamic: false, isStatic: true};
+        // }
+        // if (earthPosBefore != npcZemljaTransform.translation[0]){
+        //     npcZemlja.customProperties = {isDynamic: true, isStatic: false};
+        // } else{
+        //     npcZemlja.customProperties = {isDynamic: false, isStatic: true};
+        // }
+
+        sunPosBefore = playerTransform.translation[0];
+        earthPosBefore = npcZemljaTransform.translation[0];
+    }
+})
+
 //--------------------------------------------------------------------PLAYER'S UPDATE METHOD--------------------------------------------------------------------------------
 let moveOnce = true;
 let moveOnceZemlja = true;
@@ -360,8 +414,8 @@ let alreadyHitSonce = false;
 let alreadyHitZemlja = false;
 const playerAnimator = player.getComponentOfType(Animator);
 const zemljaAnimator = npcZemlja.getComponentOfType(Animator);
-let velocityLR = 2.0;
-let gravity = 50.0;
+let velocityLR = 2.5;
+let gravity = 60.0;
 let attacking = false;
 let grounded = true;
 let blocking = false;
@@ -369,6 +423,7 @@ let initVelY = (gravity*(1.1333333253860474-2*0.3))/2; //ta cifra je dolzina sko
 let velocityY = initVelY;
 const hitRange = 1.1;
 const kickRange = 1.5;
+
 // zemlja variables
 let zemljaMoveOnce = true;
 let decisionTimer = 0;
@@ -403,10 +458,10 @@ player.addComponent({
         //console.log("payer animation playing: "+ playerAnimator.playing);
     
         if (keys.t){
-            npcZemljaTransform.translation[0] -= dt;
+            npcZemljaTransform.translation[0] -= velocityLR*dt;
         }
         if (keys.y){
-            npcZemljaTransform.translation[0] += dt;
+            npcZemljaTransform.translation[0] += velocityLR*dt;
         }
         //moving right
         if (keys.d && attacking == false){
@@ -536,7 +591,7 @@ player.addComponent({
             alreadyHitZemlja = false;
             blocking = false;
 
-            console.log("grounded true");/*
+            /*
             const s = playerTransform.translation;
             const z = zemljaTransform.translation;
             const razlika = s[0] - z[0];
@@ -598,6 +653,10 @@ player.addComponent({
 
 npcZemlja.addComponent({
     update(t, dt) {
+        if (!zemljaAnimator.playing){
+            zemljaAnimator.play(0);
+        }
+        return;
         if(!gameRunning) {
             return;
         }
@@ -738,7 +797,7 @@ npcZemlja.addComponent({
             if (!alreadyHitSonce && zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5) {
                 healthPlayer -= 10;
                 alreadyHitSonce = true; // mark that hit connected
-                playerAnimator.play(1); // force hit reaction
+                playerAnimator.play(8); // force hit reaction
                 updateHealthBars("player-health-bar", healthPlayer, maxHealth);
                 checkGameOver();
             }
@@ -749,7 +808,7 @@ npcZemlja.addComponent({
             if (!alreadyHitSonce && zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5) {
                 healthPlayer -= 20;
                 alreadyHitSonce = true; // mark that hit connected
-                playerAnimator.play(1); // force hit reaction
+                playerAnimator.play(8); // force hit reaction
                 updateHealthBars("player-health-bar", healthPlayer, maxHealth);
                 checkGameOver();
             }
@@ -760,7 +819,7 @@ npcZemlja.addComponent({
             if (!alreadyHitSonce && zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5) {
                 healthPlayer -= 10;
                 alreadyHitSonce = true; // mark that hit connected
-                playerAnimator.play(1); // force hit reaction
+                playerAnimator.play(9); // force hit reaction
                 updateHealthBars("player-health-bar", healthPlayer, maxHealth);
                 checkGameOver();
             }
