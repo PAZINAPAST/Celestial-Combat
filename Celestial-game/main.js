@@ -3,7 +3,7 @@ import { UpdateSystem } from 'engine/systems/UpdateSystem.js';
 
 //import { UnlitRenderer } from 'engine/renderers/UnlitRenderer.js';
 import { SkyBoxRenderer } from 'engine/renderers/SkyBoxRenderer.js';
-import { TouchController } from 'engine/controllers/TouchController.js';
+//import { TouchController } from 'engine/controllers/TouchController.js';
 
 import {
     Camera,
@@ -115,11 +115,11 @@ model2.addComponent(new Model({
 }));
 
 const camera = new Entity();
-camera.addComponent(new Transform({translation : [0, 5, 0]}));
+camera.addComponent(new Transform({translation : [0, 0, 5]}));
 camera.addComponent(new Camera());
-camera.addComponent(new TouchController(camera, canvas, {
-    distance: 5,
-}));
+//camera.addComponent(new TouchController(camera, canvas, {
+  //  distance: 5,
+//}));
 
 const cube1Resources = await loadResources({
     mesh: new URL('../../../models/cube/cube.json', import.meta.url),
@@ -141,9 +141,9 @@ cube2.addComponent(new Model({
                 baseTexture: new Texture({
                     image: cube1Resources.image,
                     sampler: new Sampler({
-                        minFilter: 'nearest',
+                        minFilter: 'nearest',//nearest
                         magFilter: 'nearest',
-                        addressModeU: 'repeat',
+                        addressModeU: 'repeat', //repeat
                         addressModeV: 'repeat'
                     })
                 })
@@ -389,8 +389,14 @@ let i = 2;
 let zemljaPlaying = false;
 let startedPlaying = false;
 
+
 player.addComponent({
     update(t, dt){
+        if(!gameRunning) {
+            return;
+        }
+        
+
         const s = playerTransform.translation;
         const z = npcZemljaTransform.translation;
         const razlika = s[0] - z[0];
@@ -448,14 +454,20 @@ player.addComponent({
                 attacking = true;
             }
 
-            if(Math.abs(razlika) < hitRange && !alreadyHitZemlja) {
+            console.log("zemljaBlock: " + zemljaBlocking);
+            if(Math.abs(razlika) <= hitRange && !alreadyHitZemlja && !zemljaBlocking) {
                 healthZemlja -= 10;
                 alreadyHitZemlja = true;
+                zemljaBlocking = false;
                 console.log("Zemlja hit! Health: " + healthZemlja);
                 setTimeout(() => { 
                     zemljaAnimator.play(1);
                     updateHealthBars("npcZemlja-health-bar", healthZemlja, maxHealth);
+                    if(npcZemljaTransform.translation[1] != -1) {
+                        npcZemljaTransform.translation[1] = -1;
+                    }
                 }, 100);
+
                 checkGameOver();
             }
 
@@ -467,6 +479,22 @@ player.addComponent({
                 playerAnimator.play(5);
                 attacking = true;
             }
+
+            if(Math.abs(razlika) <= hitRange && !alreadyHitZemlja && !zemljaBlocking) {
+                healthZemlja -= 10;
+                alreadyHitZemlja = true;
+                zemljaBlocking = false;
+                console.log("Zemlja hit! Health: " + healthZemlja);
+                setTimeout(() => { 
+                    zemljaAnimator.play(1);
+                    updateHealthBars("npcZemlja-health-bar", healthZemlja, maxHealth);
+                    if(npcZemljaTransform.translation[1] != -1) {
+                        npcZemljaTransform.translation[1] = -1;
+                    }
+                }, 500);
+
+                checkGameOver();
+            }
         }
 
         //high kick
@@ -474,6 +502,22 @@ player.addComponent({
             if (grounded){
                 playerAnimator.play(7);
                 attacking = true;
+            }
+
+            if(Math.abs(razlika) <= kickRange && !alreadyHitZemlja && !zemljaBlocking) {
+                healthZemlja -= 10;
+                alreadyHitZemlja = true;
+                zemljaBlocking = false;
+                console.log("Zemlja hit! Health: " + healthZemlja);
+                setTimeout(() => { 
+                    zemljaAnimator.play(1);
+                    updateHealthBars("npcZemlja-health-bar", healthZemlja, maxHealth);
+                    if(npcZemljaTransform.translation[1] != -1) {
+                        npcZemljaTransform.translation[1] = -1;
+                    }
+                }, 400);
+
+                checkGameOver();
             }
         }
         //block
@@ -554,13 +598,17 @@ player.addComponent({
 
 npcZemlja.addComponent({
     update(t, dt) {
+        if(!gameRunning) {
+            return;
+        }
+
         decisionTimer -= dt;
-        console.log("decisionTimer: " + decisionTimer);
+        //console.log("decisionTimer: " + decisionTimer);
 
         const s = playerTransform.translation;
         const z = npcZemljaTransform.translation;
         const razlika = Math.abs(s[0] - z[0]);
-        console.log("ralika: "+ razlika);
+        //console.log("ralika: "+ razlika);
 
         
         //console.log("razlika:"+ razlika);
@@ -570,6 +618,7 @@ npcZemlja.addComponent({
         if(decisionTimer <= 0 && !zemljaAnimator.playing) {
             // popravi dejanja
             //console.log("zgodi se neka anmiacija");
+            zemljaBlocking = false;
 
             decisionTimer = 0.1 + Math.random() * 0.1;
             const r = Math.random();
@@ -643,11 +692,12 @@ npcZemlja.addComponent({
             case "superPunch":
                 zemljaAnimator.play(7);
                 zemljaAttacking = true;
-                //alreadyHitSonce = false;
+                alreadyHitSonce = false;
                 break;
             case "kick":
                 zemljaAnimator.play(8);
                 zemljaAttacking = true;
+                alreadyHitSonce = false;
                 break;
             
         }
@@ -685,14 +735,36 @@ npcZemlja.addComponent({
 
         if (zemljaAnimator.playingAnim == 6 && zemljaAttacking && !blocking && Math.abs(razlika) <= hitRange) {
 
-        if (!alreadyHitSonce && zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5) {
-            healthPlayer -= 10;
-            alreadyHitSonce = true; // mark that hit connected
-            playerAnimator.play(1); // force hit reaction
-            updateHealthBars("player-health-bar", healthPlayer, maxHealth);
-            checkGameOver();
+            if (!alreadyHitSonce && zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5) {
+                healthPlayer -= 10;
+                alreadyHitSonce = true; // mark that hit connected
+                playerAnimator.play(1); // force hit reaction
+                updateHealthBars("player-health-bar", healthPlayer, maxHealth);
+                checkGameOver();
+            }
         }
-}
+
+        if (zemljaAnimator.playingAnim == 7 && zemljaAttacking && !blocking && Math.abs(razlika) <= hitRange) {
+
+            if (!alreadyHitSonce && zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5) {
+                healthPlayer -= 20;
+                alreadyHitSonce = true; // mark that hit connected
+                playerAnimator.play(1); // force hit reaction
+                updateHealthBars("player-health-bar", healthPlayer, maxHealth);
+                checkGameOver();
+            }
+        }
+
+        if (zemljaAnimator.playingAnim == 8 && zemljaAttacking && !blocking && Math.abs(razlika) <= kickRange) {
+
+            if (!alreadyHitSonce && zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5) {
+                healthPlayer -= 10;
+                alreadyHitSonce = true; // mark that hit connected
+                playerAnimator.play(1); // force hit reaction
+                updateHealthBars("player-health-bar", healthPlayer, maxHealth);
+                checkGameOver();
+            }
+        }
 
 
         if(!zemljaAnimator.playing && zemljaAttacking) {
@@ -766,6 +838,7 @@ npcZemlja.addComponent({
     }
 
 });
+
 
 function render() {
     // The SkyBoxRenderer handles model drawing and the skybox in a single pass.

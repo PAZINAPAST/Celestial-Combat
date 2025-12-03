@@ -8,7 +8,7 @@ export class Camera {
         fovy = 1,
         halfy = 1,
         near = 0.01,
-        far = 1000,
+        far = 5000,
     } = {}) {
         this.orthographic = orthographic;
         this.aspect = aspect;
