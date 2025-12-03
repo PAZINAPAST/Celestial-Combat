@@ -117,9 +117,9 @@ model2.addComponent(new Model({
 const camera = new Entity();
 camera.addComponent(new Transform({translation : [0, 0, 5]}));
 camera.addComponent(new Camera());
-camera.addComponent(new TouchController(camera, canvas, {
-   distance: 5,
-}));
+// camera.addComponent(new TouchController(camera, canvas, {
+//    distance: 5,
+// }));
 
 const cube1Resources = await loadResources({
     mesh: new URL('../../../models/cube/cube.json', import.meta.url),
@@ -415,7 +415,7 @@ let alreadyHitZemlja = false;
 const playerAnimator = player.getComponentOfType(Animator);
 const zemljaAnimator = npcZemlja.getComponentOfType(Animator);
 let velocityLR = 2.5;
-let gravity = 60.0;
+let gravity = 70.0;
 let attacking = false;
 let grounded = true;
 let blocking = false;
@@ -653,10 +653,10 @@ player.addComponent({
 
 npcZemlja.addComponent({
     update(t, dt) {
-        if (!zemljaAnimator.playing){
-            zemljaAnimator.play(0);
-        }
-        return;
+        // if (!zemljaAnimator.playing){
+        //     zemljaAnimator.play(0);
+        // }
+        // return;
         if(!gameRunning) {
             return;
         }

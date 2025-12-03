@@ -145,38 +145,28 @@ export class Physics {
             return;
         }
 
-        //aconsole.log(minDirection);
 
-        //ce sta oba objekta dinamicna
-        // if (a.customProperties.isDynamic && b.customProperties.isDynamic){
-        //     console.log("here");
-        //     vec3.multiply(minDirection, minDirection, [0.5, 0.5, 0.5]);
-        //     vec3.add(transform_a.translation, transform_a.translation, minDirection);
-        //     vec3.multiply(minDirection, minDirection, [-1, -1, -1]);
-        //     vec3.add(transform_b.translation, transform_b.translation, minDirection);
-        // } 
-
-        minDirection[1] = 0;
+        minDirection[1] = 0;    //zato da se collision razresi samo v x-smeri (v ostalih oseh pa je 0)
         minDirection[2] = 0;
 
+        //ce sta prevec blizu skupaj se collision ne bo dobro razresil - ju je treba premakniti (v pravo smer)
+        let dx = 0.007;
+        if (Math.abs(a_position[0] - b_position[0]) < 0.5){
+            
+            if (a_position[0] < b_position[0]){
+                transform_a.translation[0] -= dx;
+                transform_b.translation[0] += dx;
+            } else{
+                transform_a.translation[0] += dx;
+                transform_b.translation[0] -= dx;
+            }
+        }
+        //ce se samo en character premika potem upocasni njegov premik, ce pa se premikata drug proti drugem pa se ustavita (oba se premakneta za 0.5*minDirection, le v nasprotno smer)
         vec3.multiply(minDirection, minDirection, [0.5, 0.5, 0.5]);
         vec3.add(transform_a.translation, transform_a.translation, minDirection);
         vec3.multiply(minDirection, minDirection, [-1, -1, -1]);
         vec3.add(transform_b.translation, transform_b.translation, minDirection);
         
-        //ce je samo en objekt dinamicen
-        // else{ 
-        //     //premaknemo objekt-a ker je dinamicen
-        //     if (a.customProperties.isDynamic){
-        //         vec3.add(transform_a.translation, transform_a.translation, minDirection);
-        //     } 
-        //     //premaknemo objekt-b ker je dinamicen
-        //     else{ 
-        //         vec3.add(transform_b.translation, transform_b.translation, minDirection);
-        //     }
-            
-        // }
-
         
     }
 
