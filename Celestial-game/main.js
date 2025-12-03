@@ -182,14 +182,15 @@ console.log("Player model: " + playerModel);
 const idleAnim = loader.loadAnimation("idle", playerModel.skin);
 const punchBlended = loader.loadAnimation("punchBlended", playerModel.skin);
 const stepForwardBlended = loader.loadAnimation("stepForwardBlended", playerModel.skin);
+const stepBack = loader.loadAnimation("stepBack", playerModel.skin);
 const stepBackBlended = loader.loadAnimation("stepBackBlended", playerModel.skin);
 const jumpAnim = loader.loadAnimation("jumpBlended", playerModel.skin);
 const hookPunchBlended = loader.loadAnimation("hookPunchBlended", playerModel.skin);
-const block = loader.loadAnimation("block", playerModel.skin);
+const block = loader.loadAnimation("blockBlended", playerModel.skin);
 const kickBlended = loader.loadAnimation("kickBlended", playerModel.skin);
 const hit = loader.loadAnimation("hitBlended", playerModel.skin);
 const hitKnockback = loader.loadAnimation("hitStepBackBlended", playerModel.skin);
-player.addComponent(new Animator([idleAnim, punchBlended, stepForwardBlended, stepBackBlended, jumpAnim, hookPunchBlended, block, kickBlended, hit, hitKnockback]));  //dodajanje vseh animacij v player-ja
+player.addComponent(new Animator([idleAnim, punchBlended, stepForwardBlended, stepBackBlended, jumpAnim, hookPunchBlended, block, kickBlended, hit, hitKnockback, stepBack]));  //dodajanje vseh animacij v player-ja
 
 player.isAnimated = true;
 
@@ -444,6 +445,17 @@ let i = 2;
 let zemljaPlaying = false;
 let startedPlaying = false;
 
+//object v katerem shranimo, ali smo spustili tipko za nek udarec, potem ko smo jo pritisnili
+//s tem mehanizmom preprecimo da bi drzali gumb in bi se udarec predvajal znova in znova
+const playerAttackReset = {
+    punch: true,
+    hook: true,
+    kick: true,
+    block: true,
+    moveR: true,
+    moveL: true,
+}
+
 
 player.addComponent({
     update(t, dt){
@@ -463,31 +475,37 @@ player.addComponent({
         if (keys.y){
             npcZemljaTransform.translation[0] += velocityLR*dt;
         }
-        //moving right
-        if (keys.d && attacking == false){
+
+        //moving right---------------------------------------------------------------
+        if (keys.d  && !attacking && !blocking){
             playerTransform.translation[0] += velocityLR * dt;
-            if (moveOnce){
+            if (moveOnce && grounded){
                 playerAnimator.play(2);
                 moveOnce = false;
-
-                //const s = playerTransform.translation;
-                //const z = zemljaTransform.translation;
-                //console.log(s);
-                //console.log(z);
             }  
             
         }
 
-        //moving left
-        if (keys.a && attacking == false){
+        //moving left---------------------------------------------------------------
+        if (keys.a  && !attacking && !blocking){
             playerTransform.translation[0] += -velocityLR * dt;
-            if (moveOnce){
-                playerAnimator.play(3);
+            if (moveOnce && grounded && playerAttackReset.moveL){
+                playerAnimator.playShort(3, 0);
                 moveOnce = false;
+                //playerAttackReset.moveL = false;
             }
+            // if (moveOnce && !playerAttackReset.moveL){
+            //     moveOnce = false;
+            //     playerAnimator.play(10);
+            // }
         }
+        //if (!keys.a){playerAttackReset.moveL = true;}
 
-        //jumping (playing animation)
+        
+        //ce spustimo gumb se mora tudi animacija za premikanje predhodno ustaviti
+        //if ((!keys.a && !keys.d) && (playerAnimator.playingAnim == 3 || playerAnimator.playingAnim == 2)){playerAnimator.playing = false;}
+
+        //jumping (playing animation)--------------------------------------------
         if (keys.w && attacking == false){
             if (grounded){
                 velocityY = initVelY; //ta stvar triggera premikanje v vertikalni smeri
@@ -496,17 +514,23 @@ player.addComponent({
             }
         }
 
-        //jumping (actually moving up-down)
+        //jumping (actually moving up-down)---------------------------------------
         if (playerAnimator.playingAnim == 4 && playerAnimator.time > 0.3 && playerAnimator.time < playerAnimator.animLen - 0.3){
             velocityY -= gravity*dt;
             playerTransform.translation[1] += velocityY*dt;
+
+            //zakljuci animacijo ko prides na tla
+            if (playerTransform.translation[1] < -1){
+                playerTransform.translation[1] = -1;
+            }
         }
 
-        //punch
+        //punch--------------------------------------------------------------------
         if (keys.e){
-            if (grounded){
+            if (grounded && !attacking && playerAttackReset.punch){
                 playerAnimator.play(1);
                 attacking = true;
+                playerAttackReset.punch = false;
             }
 
             console.log("zemljaBlock: " + zemljaBlocking);
@@ -515,7 +539,7 @@ player.addComponent({
                 alreadyHitZemlja = true;
                 zemljaBlocking = false;
                 console.log("Zemlja hit! Health: " + healthZemlja);
-                setTimeout(() => { 
+                setTimeout(() => {  //ce je hit registriran potem predvajaj hit animacijo in zmanjsaj health
                     zemljaAnimator.play(1);
                     updateHealthBars("npcZemlja-health-bar", healthZemlja, maxHealth);
                     if(npcZemljaTransform.translation[1] != -1) {
@@ -528,11 +552,15 @@ player.addComponent({
 
         }
 
-        //hook punch
+        if (!keys.e){playerAttackReset.punch = true;}
+        
+
+        //hook punch----------------------------------------------------------------------
         if (keys.r){
-            if (grounded){
+            if (grounded && !attacking && playerAttackReset.hook){
                 playerAnimator.play(5);
                 attacking = true;
+                playerAttackReset.hook = false;
             }
 
             if(Math.abs(razlika) <= hitRange && !alreadyHitZemlja && !zemljaBlocking) {
@@ -551,12 +579,14 @@ player.addComponent({
                 checkGameOver();
             }
         }
+        if (!keys.r){playerAttackReset.hook = true;}
 
-        //high kick
-        if (keys.f){
+        //high kick--------------------------------------------------------------------------------
+        if (keys.f && !attacking && playerAttackReset.kick){
             if (grounded){
                 playerAnimator.play(7);
                 attacking = true;
+                playerAttackReset.kick = false;
             }
 
             if(Math.abs(razlika) <= kickRange && !alreadyHitZemlja && !zemljaBlocking) {
@@ -575,18 +605,23 @@ player.addComponent({
                 checkGameOver();
             }
         }
-        //block
+        if (!keys.f){playerAttackReset.kick = true;}
+
+        //block-----------------------------------------------------------------------------------------
         if (keys.q){
-            if (grounded){
+            if (grounded && !blocking && playerAttackReset.block){
                 playerAnimator.play(6);
                 blocking = true;
+                playerAttackReset.block = false;
             }
         }
+        if (!keys.q){playerAttackReset.block = true;}
+
 
         //reseting stuff | playing idle animation
         if (!playerAnimator.playing){
             moveOnce = true;
-            grounded = true;    
+            grounded = true;       //a je to res v redu??
             attacking = false;
             alreadyHitZemlja = false;
             blocking = false;
@@ -600,14 +635,11 @@ player.addComponent({
             console.log(Math.abs(razlika));*/
             //console.log("popoppop");
             console.log("Zemlja health: " + healthZemlja);
-            if (playerTransform.translation[1] != -1){
-                console.log("correcting y-position");
-                playerTransform.translation[1] = -1;
-            } 
-            if (!keys.a && !keys.d && !keys.w){ //zato da objekt ne gre za 1 frame v idle mode potem pa ze v nek movind animation ce drzimo nek gumb
-                playerAnimator.play(0);
+
+            // if (!keys.a && !keys.d && !keys.w){ //zato da objekt ne gre za 1 frame v idle mode potem pa ze v nek movind animation ce drzimo nek gumb
+            playerAnimator.play(0);
                 //zemljaAnimator.play(0);
-            }
+            //}
             
         }
         /*

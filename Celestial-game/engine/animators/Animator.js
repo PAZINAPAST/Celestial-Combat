@@ -8,6 +8,7 @@ export class Animator {
         this.loop = false;
         this.playingAnim =  -1          //indeks animacije ki se predvaja
         this.animLen = -1;              //dolzina animacije v sekundah
+        this.cut = 0;                   //koliko sekund skrajsamo animacijo (se cut-sekund predcasno konca)
     }
 
     play(index) {
@@ -18,7 +19,19 @@ export class Animator {
         this.playing = true;
         this.playingAnim = index;
         this.animLen = this.animations[index].maxTime;
+        this.cut = 0;
         //console.log("trajanje animacije: " + this.animLen)
+    }
+
+
+    //funkcija ki odreze zadnjih "cut"-sekund animacije
+    playShort(index, cut){
+        this.current = index;
+        this.time = 0;
+        this.playing = true;
+        this.playingAnim = index;
+        this.animLen = this.animations[index].maxTime;
+        this.cut = cut;
     }
 
     update1(dt) {
@@ -26,7 +39,7 @@ export class Animator {
         this.time += dt;
         const anim = this.animations[this.current];
 
-        const duration = anim.maxTime;
+        const duration = anim.maxTime - this.cut;
 
         if (this.time > duration) {
             if (this.loop) this.time = this.time % duration;    //loopaj animacijo
