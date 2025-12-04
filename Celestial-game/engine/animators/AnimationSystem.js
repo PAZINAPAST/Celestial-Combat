@@ -46,7 +46,7 @@ export class AnimationSystem {
             while (i < times.length - 1 && t >= times[i+1])
                 i++;
 
-            const t0 = times[i];
+            const t0 = times[i];            //t0 in t1 sta timestamp-a za dva zaporedna keyframe-a v animaciji
             const t1 = times[i+1] ?? t0;
 
             const u = t1 > t0 ? (t - t0) / (t1 - t0) : 0;

@@ -152,7 +152,6 @@ export class Physics {
         //ce sta prevec blizu skupaj se collision ne bo dobro razresil - ju je treba premakniti (v pravo smer)
         let dx = 0.007;
         if (Math.abs(a_position[0] - b_position[0]) < 0.5){
-            
             if (a_position[0] < b_position[0]){
                 transform_a.translation[0] -= dx;
                 transform_b.translation[0] += dx;
@@ -161,6 +160,7 @@ export class Physics {
                 transform_b.translation[0] -= dx;
             }
         }
+        
         //ce se samo en character premika potem upocasni njegov premik, ce pa se premikata drug proti drugem pa se ustavita (oba se premakneta za 0.5*minDirection, le v nasprotno smer)
         vec3.multiply(minDirection, minDirection, [0.5, 0.5, 0.5]);
         vec3.add(transform_a.translation, transform_a.translation, minDirection);
