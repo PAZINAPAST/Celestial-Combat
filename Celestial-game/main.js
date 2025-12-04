@@ -347,6 +347,8 @@ const endScreen = document.getElementById("game-over-screen");
 const endMessage = document.getElementById("gameover-message");
 const startButton = document.getElementById("start-button");
 const restartButton = document.getElementById("restart-button");
+const controlsPopup = document.getElementById("controls-popup");
+const closePopup = document.getElementById("close-popup");
 
 let gameRunning = false;
 let gravity = 20.0;
@@ -355,6 +357,21 @@ const playerInitHeight = 0.6*0.6*0.5*gravity;
 
 startButton.addEventListener("click", () => {
     startScreen.classList.add("hidden");
+    controlsPopup.classList.add("active"); 
+  
+
+    closePopup.addEventListener("click", closeControlsPopup);
+
+
+    document.addEventListener("keydown", (event) => {
+        if (controlsPopup.classList.contains("active")) {
+            closeControlsPopup();
+        }
+    });
+});
+
+
+function startActualGame() {
     playerTransform.translation = [-2, playerInitHeight, 0];
     npcZemljaTransform.translation = [2, playerInitHeight, 0];
     healthPlayer = maxHealth;
@@ -366,10 +383,10 @@ startButton.addEventListener("click", () => {
     zemljaVelocity = 0;
     gravity = 20.0;
 
-    setTimeout(() => {
+    //setTimeout(() => {
         playerAnimator.play(11);
         zemljaAnimator.play(10);
-    }, 500);       //predvajaj start animacijo z zamikom
+    //}, 500);       //predvajaj start animacijo z zamikom
     
     setTimeout(() =>{   //nastavi gameRunning z delayom (pocakaj tako dolgo da se starting animation predvaja do konca)
         gameRunning = true;
@@ -377,7 +394,8 @@ startButton.addEventListener("click", () => {
         initVelY = (gravity*(1.1333333253860474-2*0.3))/2; //ta cifra je dolzina skoka v sekundah (animLen - 2*odmik)
         console.log("fight");
     }, 3400);
-});
+}
+
 
 restartButton.addEventListener("click", () => {
     endScreen.classList.add("hidden");
@@ -396,6 +414,15 @@ function checkGameOver(){
         endMessage.textContent = "You win!"
         endScreen.classList.remove("hidden");
     }
+}
+
+
+function closeControlsPopup() {
+    controlsPopup.classList.remove("active"); 
+
+    setTimeout(() => {
+        startActualGame();
+    }, 600);
 }
 
 //--------------------------------------------------------------------GAME MANAGER---------------------------------------------------------------------------------------------
