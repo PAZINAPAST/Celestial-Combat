@@ -118,9 +118,9 @@ model2.addComponent(new Model({
 const camera = new Entity();
 camera.addComponent(new Transform({translation : [0, 0, 5]}));
 camera.addComponent(new Camera());
-// camera.addComponent(new TouchController(camera, canvas, {
-//    distance: 5,
-// }));
+camera.addComponent(new TouchController(camera, canvas, {
+   distance: 5,
+}));
 
 const cube1Resources = await loadResources({
     mesh: new URL('../../../models/cube/cube.json', import.meta.url),
@@ -167,7 +167,7 @@ sonceTransform.translation = [2, -2, 0];
 //-------------------------------------------------------ANIMATED SUN--------------------------------------------------------------------
 //loading animated test object
 loader = new GLTFLoader();
-await loader.load(new URL('./models/sunAnimated6/animatedSun6.gltf', import.meta.url));
+await loader.load(new URL('./models/sunAnimated9/animatedSun3.gltf', import.meta.url));
 const loadedScene = loader.loadScene();
 console.log(loadedScene);
 const playerArmature = loadedScene[0];
@@ -191,7 +191,8 @@ const block = loader.loadAnimation("blockBlended", playerModel.skin);
 const kickBlended = loader.loadAnimation("kickBlended", playerModel.skin);
 const hit = loader.loadAnimation("hitBlended", playerModel.skin);
 const hitKnockback = loader.loadAnimation("hitStepBackBlended", playerModel.skin);
-player.addComponent(new Animator([idleAnim, punchBlended, stepForwardBlended, stepBackBlended, jumpAnim, hookPunchBlended, block, kickBlended, hit, hitKnockback, stepBack]));  //dodajanje vseh animacij v player-ja
+const startAnim = loader.loadAnimation("startAnimNoVerticalBlended", playerModel.skin);
+player.addComponent(new Animator([idleAnim, punchBlended, stepForwardBlended, stepBackBlended, jumpAnim, hookPunchBlended, block, kickBlended, hit, hitKnockback, stepBack, startAnim]));  //dodajanje vseh animacij v player-ja
 
 player.isAnimated = true;
 
@@ -210,7 +211,7 @@ console.log(playerArmature);
 
 //-------------------------------------------------------ANIMATED EARTH--------------------------------------------------------------------
 loader = new GLTFLoader();
-await loader.load(new URL('./models/zemljaAnimated1/zemljaAnimated0.gltf', import.meta.url));
+await loader.load(new URL('./models/zemljaAnimated3/zemljaAnimated0.gltf', import.meta.url));
 const loadedSceneZemlja = loader.loadScene();
 console.log(loadedSceneZemlja);
 const zemljaArmature = loadedSceneZemlja[1];
@@ -233,8 +234,10 @@ const zemljaBlock = loader.loadAnimation("blockBlended", npcZemljaModel.skin);
 const zemljaPunchAnim = loader.loadAnimation("punchBlended", npcZemljaModel.skin);
 const zemljaHookPunch = loader.loadAnimation("hookPunchBlended", npcZemljaModel.skin);
 const zemljaKick = loader.loadAnimation("kickBlended", npcZemljaModel.skin);
+const zemljaHitKnockback = loader.loadAnimation("hitStepBackBlended", npcZemljaModel.skin);
+const zemljaStartAnim = loader.loadAnimation("startAnimBlended", npcZemljaModel.skin);
 
-npcZemlja.addComponent(new Animator([zemljaIdleAnim, zemljaHitAnim, zemljaStepForward, zemljaStepBack, zemljaJump, zemljaBlock, zemljaPunchAnim, zemljaHookPunch, zemljaKick]));
+npcZemlja.addComponent(new Animator([zemljaIdleAnim, zemljaHitAnim, zemljaStepForward, zemljaStepBack, zemljaJump, zemljaBlock, zemljaPunchAnim, zemljaHookPunch, zemljaKick, zemljaHitKnockback, zemljaStartAnim]));
 npcZemlja.isAnimated = true;
 
 npcZemlja.isAnimated = true;
@@ -346,22 +349,41 @@ const startButton = document.getElementById("start-button");
 const restartButton = document.getElementById("restart-button");
 
 let gameRunning = false;
+let gravity = 20.0;
+let initVelY = 0;
+const playerInitHeight = 0.6*0.6*0.5*gravity;
 
 startButton.addEventListener("click", () => {
     startScreen.classList.add("hidden");
-    gameRunning = true;
-    playerTransform.translation = [-2, -1, 0];
-    npcZemljaTransform.translation = [2, -1, 0];
+    playerTransform.translation = [-2, playerInitHeight, 0];
+    npcZemljaTransform.translation = [2, playerInitHeight, 0];
     healthPlayer = maxHealth;
     healthZemlja = maxHealth;
     updateHealthBars("player-health-bar", healthPlayer, maxHealth);
     updateHealthBars("npcZemlja-health-bar", healthZemlja, maxHealth);
+
+    velocityY = 0;
+    zemljaVelocity = 0;
+    gravity = 20.0;
+
+    setTimeout(() => {
+        playerAnimator.play(11);
+        zemljaAnimator.play(10);
+    }, 500);       //predvajaj start animacijo z zamikom
+    
+    setTimeout(() =>{   //nastavi gameRunning z delayom (pocakaj tako dolgo da se starting animation predvaja do konca)
+        gameRunning = true;
+        gravity = 70.0;
+        initVelY = (gravity*(1.1333333253860474-2*0.3))/2; //ta cifra je dolzina skoka v sekundah (animLen - 2*odmik)
+        console.log("fight");
+    }, 3400);
 });
 
 restartButton.addEventListener("click", () => {
     endScreen.classList.add("hidden");
     startScreen.classList.remove("hidden");
-    gameRunning = false;
+    
+    gameRunning = false;    //ustavi igro dokler je stop screen
 });
 
 function checkGameOver(){
@@ -396,6 +418,7 @@ let rotationalCoefcient = 1;
 gameManager.addComponent({
     update(t, dt){
 
+        //---------------------------------------OBRACANJE IGRALCEV-------------------------------------------------------------
         //player je na levi strani
         if (playerTransform.translation[0] < npcZemljaTransform.translation[0]){
             rotationalCoefcient = 1;
@@ -408,24 +431,28 @@ gameManager.addComponent({
             npcZemljaTransform.rotation = faceRight;
         }
 
+        //---------------------------------------POPRAVEK NA Z-OSI-------------------------------------------------------------
         //ce se zgodi da sonce ali zemlja nista na z = 0, potem popravi (te se for some reason lahko zgodi ko hoce player skociti cez zemljo)
         if (playerTransform.translation[2] != 0) {playerTransform.translation[2] = 0}
         if (npcZemljaTransform.translation[2] != 0) {npcZemljaTransform.translation[2] = 0}
 
-        // //preverimo ali se je character premaknil glede na prejsnji frame - ce se je, ga nastavimo kot dinamicnega, v nasprotnem primeru pa kot staticnega
-        // if (sunPosBefore != playerTransform.translation[0]){
-        //     player.customProperties = {isDynamic: true, isStatic: false};
-        // } else{
-        //     player.customProperties = {isDynamic: false, isStatic: true};
-        // }
-        // if (earthPosBefore != npcZemljaTransform.translation[0]){
-        //     npcZemlja.customProperties = {isDynamic: true, isStatic: false};
-        // } else{
-        //     npcZemlja.customProperties = {isDynamic: false, isStatic: true};
-        // }
+        //---------------------------------------PREDVAJANJE ANIMACIJE NA ZACETKU-------------------------------------------------------------
+        //delovanje gravitacije na pri predvajanju startAnimation
+        if (playerAnimator.playingAnim == 11 || zemljaAnimator.playingAnim == 10){
+            velocityY -= gravity*dt;
+            zemljaVelocity -= gravity*dt;
+            playerTransform.translation[1] += velocityY*dt;
+            npcZemljaTransform.translation[1] += zemljaVelocity*dt;
 
-        sunPosBefore = playerTransform.translation[0];
-        earthPosBefore = npcZemljaTransform.translation[0];
+            //zakljuci animacijo ko prides na tla
+            if (playerTransform.translation[1] < -1){
+                playerTransform.translation[1] = -1;
+            }
+            if (npcZemljaTransform.translation[1] < -1){
+                npcZemljaTransform.translation[1] = -1;
+            }
+        }
+
     }
 })
 
@@ -437,11 +464,11 @@ let alreadyHitZemlja = false;
 const playerAnimator = player.getComponentOfType(Animator);
 const zemljaAnimator = npcZemlja.getComponentOfType(Animator);
 let velocityLR = 2.5;
-let gravity = 70.0;
+
 let attacking = false;
 let grounded = true;
 let blocking = false;
-let initVelY = (gravity*(1.1333333253860474-2*0.3))/2; //ta cifra je dolzina skoka v sekundah (animLen - 2*odmik)
+initVelY = (gravity*(1.1333333253860474-2*0.3))/2; //ta cifra je dolzina skoka v sekundah (animLen - 2*odmik)
 let velocityY = initVelY;
 const hitRange = 1.4;
 const kickRange = 1.8;
@@ -457,8 +484,8 @@ let zemljaAction = "idle";
 let zemljaAttacking = false;
 let zemljaBlocking = false;
 let zemljaJumping = false;
-let zemljaVelocity = initVelY;
-let zemljaPremik = 2;
+let zemljaVelocity = initVelY;      //hitrost zemlje v vertikalni smeri
+let zemljaPremik = 2.5;             //hitrost zemlje levo-desno
 
 //hitstopManager
 const hitStop = new HitStopManager();
@@ -540,6 +567,7 @@ player.addComponent({
         if (keys.d  && !attacking && !blocking){
             playerTransform.translation[0] += velocityLR * dt;
             if (moveOnce && grounded){
+                //playerAnimator.playShort(2, 0.13, 0.112);
                 playerAnimator.play(2);
                 moveOnce = false;
             }  
@@ -550,14 +578,15 @@ player.addComponent({
         if (keys.a  && !attacking && !blocking){
             playerTransform.translation[0] += -velocityLR * dt;
             if (moveOnce && grounded && playerAttackReset.moveL){
-                playerAnimator.playShort(3, 0);
+                playerAnimator.playShort(3, 0.0, 0.0);
+                //playerAnimator.play(3);
                 moveOnce = false;
                 //playerAttackReset.moveL = false;
             }
-            // if (moveOnce && !playerAttackReset.moveL){
-            //     moveOnce = false;
-            //     playerAnimator.play(10);
-            // }
+            if (moveOnce && !playerAttackReset.moveL){
+                moveOnce = false;
+                playerAnimator.play(10);
+            }
         }
         //if (!keys.a){playerAttackReset.moveL = true;}
 
@@ -584,6 +613,7 @@ player.addComponent({
                 playerTransform.translation[1] = -1;
             } 
         }
+
 
         //punch--------------------------------------------------------------------
         if (keys.e){
@@ -770,10 +800,9 @@ player.addComponent({
             //console.log("popoppop");
             console.log("Zemlja health: " + healthZemlja);
 
-            // if (!keys.a && !keys.d && !keys.w){ //zato da objekt ne gre za 1 frame v idle mode potem pa ze v nek movind animation ce drzimo nek gumb
-            playerAnimator.play(0);
-                //zemljaAnimator.play(0);
-            //}
+            if (!keys.a && !keys.d && !keys.w){ //zato da objekt ne gre za 1 frame v idle mode potem pa ze v nek movind animation ce drzimo nek gumb
+                playerAnimator.play(0);
+            }
             
         }
         /*

@@ -25,14 +25,14 @@ export class Animator {
     }
 
 
-    //funkcija ki odreze zadnjih "cut"-sekund animacije
-    playShort(index, cut){
+    //funkcija ki zacne animacijo pri "start" in konca "end" sekund pred koncem
+    playShort(index, start, end){
         this.current = index;
-        this.time = 0;
+        this.time = start;
         this.playing = true;
         this.playingAnim = index;
         this.animLen = this.animations[index].maxTime;
-        this.cut = cut;
+        this.cut = end;
     }
 
     update1(dt) {
