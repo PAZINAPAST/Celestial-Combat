@@ -9,6 +9,7 @@ export class Animator {
         this.playingAnim =  -1          //indeks animacije ki se predvaja
         this.animLen = -1;              //dolzina animacije v sekundah
         this.cut = 0;                   //koliko sekund skrajsamo animacijo (se cut-sekund predcasno konca)
+        this.paused = false;
     }
 
     play(index) {
@@ -36,6 +37,8 @@ export class Animator {
 
     update1(dt) {
         if (!this.playing || this.current === null) return;     //ce se nobena animacija ne predvaja, potem nic ne naredi
+        if(this.paused) return;
+
         this.time += dt;
         const anim = this.animations[this.current];
 

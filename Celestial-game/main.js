@@ -26,6 +26,7 @@ import { AnimationSystem } from 'engine/animators/AnimationSystem.js'
 import { Animator } from 'engine/animators/Animator.js'
 import { Physics } from 'engine/core/Physics.js';
 import { calculateAxisAlignedBoundingBox, mergeAxisAlignedBoundingBoxes, } from 'engine/core/MeshUtils.js';
+import { HitStopManager } from './engine/animators/HitStopManager.js';
 
 import { mat4, vec3, quat } from 'glm';
 
@@ -308,6 +309,23 @@ function update(time, dt) {
     animSystem.update(scene, dt);
 }
 
+//--------------------------------------------------------------------SOUND INTIALIZATION---------------------------------------------------------------------------------
+const punchSound = new Audio('./sounds/punch.mp3');
+const superPunchSound = new Audio('./sounds/super_punch.mp3');
+const kickSound = new Audio('./sounds/kick.mp3');
+const blockSound = new Audio('./sounds/block.mp3');
+const punchMissSound = new Audio('./sounds/punchMiss.mp3');
+const superMissSound = new Audio('./sounds/superMiss.mp3');
+const kickMissSound = new Audio('./sounds/kickMiss.mp3');
+
+punchSound.preload = 'auto';
+superPunchSound.preload = 'auto';
+kickSound.preload = 'auto';
+blockSound.preload = 'auto';
+punchMissSound.preload = 'auto';
+superMissSound.preload = 'auto';
+kickMissSound.preload = 'auto';
+
 
 //-------------------------------------------------------------------EVENT LISTENERS and USER INPUT-----------------------------------------------------------------------
 let keys = {};
@@ -373,16 +391,19 @@ faceLeft = quat.multiply(faceLeft, rotQuat3, rotQuat1);
 
 let sunPosBefore = playerTransform.translation[0];
 let earthPosBefore = npcZemljaTransform.translation[0];
+let rotationalCoefcient = 1;
 
 gameManager.addComponent({
     update(t, dt){
 
         //player je na levi strani
         if (playerTransform.translation[0] < npcZemljaTransform.translation[0]){
+            rotationalCoefcient = 1;
             playerTransform.rotation = faceRight;
             npcZemljaTransform.rotation = faceLeft;
 
         } else{ //player je na desni
+            rotationalCoefcient = -1;
             playerTransform.rotation = faceLeft;
             npcZemljaTransform.rotation = faceRight;
         }
@@ -422,8 +443,12 @@ let grounded = true;
 let blocking = false;
 let initVelY = (gravity*(1.1333333253860474-2*0.3))/2; //ta cifra je dolzina skoka v sekundah (animLen - 2*odmik)
 let velocityY = initVelY;
-const hitRange = 1.1;
-const kickRange = 1.5;
+const hitRange = 1.4;
+const kickRange = 1.8;
+let playerGetKicked = false;
+let playerGetSuperPunched = false;
+let playerGetPunched = false;
+let freezetimer = 0;
 
 // zemlja variables
 let zemljaMoveOnce = true;
@@ -435,11 +460,18 @@ let zemljaJumping = false;
 let zemljaVelocity = initVelY;
 let zemljaPremik = 2;
 
+//hitstopManager
+const hitStop = new HitStopManager();
+hitStop.addTarget(playerAnimator);
+hitStop.addTarget(zemljaAnimator); 
+
 function updateHealthBars(id, health, maxHealth){
     const bar = document.getElementById(id);
     const percent = Math.max(0, (health / maxHealth) * 100);
     bar.style.setProperty('--health', percent + '%');
 }
+
+
 
 let i = 2;
 let zemljaPlaying = false;
@@ -463,11 +495,39 @@ player.addComponent({
             return;
         }
         
+        hitStop.update(dt);
+        if(hitStop.active) {
+            return;
+        }
 
         const s = playerTransform.translation;
         const z = npcZemljaTransform.translation;
         const razlika = s[0] - z[0];
         //console.log("payer animation playing: "+ playerAnimator.playing);
+
+        if(attacking && playerAnimator.playingAnim == 1) {
+           if(playerAnimator.time > 0 && playerAnimator.time < playerAnimator.animLen-0.4) {
+                playerTransform.translation[0] += velocityLR * dt * rotationalCoefcient;
+            }
+        }
+
+        if(playerGetKicked && playerAnimator.playingAnim == 9) {
+            if (playerAnimator.time > 0.2 && playerAnimator.time < playerAnimator.animLen - 1) {
+                playerTransform.translation[0] -= velocityLR * dt * rotationalCoefcient;
+            }
+        }
+
+        if(playerGetSuperPunched && playerAnimator.playingAnim == 8) {
+            //playerTransform.translation[0] -= velocityLR * dt * rotationalCoefcient;
+        }
+
+        if(!playerAnimator.playing && playerGetKicked) {
+            playerGetKicked = false;
+        }
+
+        if(!playerAnimator.playing && playerGetSuperPunched) {
+            playerGetSuperPunched = false;
+        }
     
         if (keys.t){
             npcZemljaTransform.translation[0] -= velocityLR*dt;
@@ -519,10 +579,10 @@ player.addComponent({
             velocityY -= gravity*dt;
             playerTransform.translation[1] += velocityY*dt;
 
-            //zakljuci animacijo ko prides na tla
-            if (playerTransform.translation[1] < -1){
+            if (playerTransform.translation[1] <= -1){
+                console.log("correcting y-position");
                 playerTransform.translation[1] = -1;
-            }
+            } 
         }
 
         //punch--------------------------------------------------------------------
@@ -531,21 +591,46 @@ player.addComponent({
                 playerAnimator.play(1);
                 attacking = true;
                 playerAttackReset.punch = false;
+                blockSound.currentTime = 0;
             }
 
-            console.log("zemljaBlock: " + zemljaBlocking);
+
+            //console.log("zemljaBlock: " + zemljaBlocking);
+            if(Math.abs(razlika) <= hitRange) {
+                setTimeout(() => {
+                    hitStop.trigger(0.2);
+                },300);
+            }/* else {
+                //blockSound.play();
+                punchMissSound.currentTime = 0;
+                punchMissSound.play();
+            }*/
+
+            if(Math.abs(razlika) <= hitRange && zemljaBlocking) {
+                blockSound.play();
+            }
+
             if(Math.abs(razlika) <= hitRange && !alreadyHitZemlja && !zemljaBlocking) {
+
                 healthZemlja -= 10;
                 alreadyHitZemlja = true;
                 zemljaBlocking = false;
                 console.log("Zemlja hit! Health: " + healthZemlja);
+                punchSound.currentTime = 0;
+                
+
                 setTimeout(() => {  //ce je hit registriran potem predvajaj hit animacijo in zmanjsaj health
+                    //hitStop.trigger(0.1);
+                    
                     zemljaAnimator.play(1);
+                    punchSound.play();
                     updateHealthBars("npcZemlja-health-bar", healthZemlja, maxHealth);
                     if(npcZemljaTransform.translation[1] != -1) {
                         npcZemljaTransform.translation[1] = -1;
                     }
-                }, 100);
+                    freezetimer = 1;
+                }, 50);
+
 
                 checkGameOver();
             }
@@ -561,6 +646,23 @@ player.addComponent({
                 playerAnimator.play(5);
                 attacking = true;
                 playerAttackReset.hook = false;
+                superPunchSound.currentTime = 0;
+                blockSound.currentTime = 0;
+            }
+
+            if(Math.abs(razlika) <= hitRange) {
+                //blockSound.play();
+                setTimeout(() => {
+                    hitStop.trigger(0.1);
+                },800);
+            } /*else {
+                //blockSound.play();
+                superMissSound.currentTime = 0;
+                superMissSound.play();
+            }*/
+
+            if(Math.abs(razlika) <= hitRange && zemljaBlocking) {
+                blockSound.play();
             }
 
             if(Math.abs(razlika) <= hitRange && !alreadyHitZemlja && !zemljaBlocking) {
@@ -568,12 +670,16 @@ player.addComponent({
                 alreadyHitZemlja = true;
                 zemljaBlocking = false;
                 console.log("Zemlja hit! Health: " + healthZemlja);
+                
                 setTimeout(() => { 
+                    //hitStop.trigger(0.5);
                     zemljaAnimator.play(1);
+                    superPunchSound.play();
                     updateHealthBars("npcZemlja-health-bar", healthZemlja, maxHealth);
                     if(npcZemljaTransform.translation[1] != -1) {
                         npcZemljaTransform.translation[1] = -1;
                     }
+                    freezetimer = 1;
                 }, 500);
 
                 checkGameOver();
@@ -587,6 +693,26 @@ player.addComponent({
                 playerAnimator.play(7);
                 attacking = true;
                 playerAttackReset.kick = false;
+                kickSound.currentTime = 0;
+                blockSound.currentTime = 0;
+            }
+
+            if(Math.abs(razlika) <= kickRange) {
+                //blockSound.play();
+                setTimeout(() => {
+                    hitStop.trigger(0.15);
+                },600);
+            } /*else {
+                //blockSound.play();
+                kickMissSound.currentTime = 0;
+                kickMissSound.play();
+            }*/
+
+            if(Math.abs(razlika) <= kickRange && zemljaBlocking) {
+                setTimeout(() => {
+                    blockSound.play();
+                }, 200);
+                //blockSound.play();
             }
 
             if(Math.abs(razlika) <= kickRange && !alreadyHitZemlja && !zemljaBlocking) {
@@ -594,12 +720,18 @@ player.addComponent({
                 alreadyHitZemlja = true;
                 zemljaBlocking = false;
                 console.log("Zemlja hit! Health: " + healthZemlja);
+                
+                //freezetimer = 5;
                 setTimeout(() => { 
+                    //hitStop.trigger(0.5);
                     zemljaAnimator.play(1);
+                    kickSound.play();
+                    //freezetimer = 5;
                     updateHealthBars("npcZemlja-health-bar", healthZemlja, maxHealth);
                     if(npcZemljaTransform.translation[1] != -1) {
                         npcZemljaTransform.translation[1] = -1;
                     }
+                    
                 }, 400);
 
                 checkGameOver();
@@ -617,6 +749,8 @@ player.addComponent({
         }
         if (!keys.q){playerAttackReset.block = true;}
 
+
+        
 
         //reseting stuff | playing idle animation
         if (!playerAnimator.playing){
@@ -685,11 +819,17 @@ player.addComponent({
 
 npcZemlja.addComponent({
     update(t, dt) {
-        // if (!zemljaAnimator.playing){
-        //     zemljaAnimator.play(0);
-        // }
-        // return;
+        /*
+        if (!zemljaAnimator.playing){
+            zemljaAnimator.play(0);
+        }
+        return;*/
         if(!gameRunning) {
+            return;
+        }
+
+        hitStop.update(dt);
+        if(hitStop.active) {
             return;
         }
 
@@ -748,7 +888,7 @@ npcZemlja.addComponent({
                     zemljaAction = "block";
                 } else if (r <= 0.3) {
                     zemljaAction = "kick";
-                } else if(r <= 0.6) {
+                } else if(r <= 0.4) {
                     zemljaAction = "idle";
                 } else {
                     zemljaAction = "advance";
@@ -779,16 +919,31 @@ npcZemlja.addComponent({
                 zemljaAnimator.play(6);
                 zemljaAttacking = true;
                 alreadyHitSonce = false;
+                if(Math.abs(razlika) <= hitRange) {    
+                    setTimeout(()=> {
+                        hitStop.trigger(0.3);
+                    },300);
+                }
                 break;
             case "superPunch":
                 zemljaAnimator.play(7);
                 zemljaAttacking = true;
                 alreadyHitSonce = false;
+                if(Math.abs(razlika) <= hitRange) {    
+                    setTimeout(()=> {
+                        hitStop.trigger(0.3);
+                    },800);
+                }
                 break;
             case "kick":
                 zemljaAnimator.play(8);
                 zemljaAttacking = true;
                 alreadyHitSonce = false;
+                if(Math.abs(razlika) <= kickRange) {    
+                    setTimeout(()=> {
+                        hitStop.trigger(0.5);
+                    },900);
+                }
                 break;
             
         }
@@ -800,14 +955,14 @@ npcZemlja.addComponent({
         if(zemljaAnimator.playingAnim == 2 && zemljaAction == "advance") {
 
             if (zemljaAnimator.time > 0.2 && zemljaAnimator.time < zemljaAnimator.animLen - 0.2) {
-                npcZemljaTransform.translation[0] -= zemljaPremik * dt;
+                npcZemljaTransform.translation[0] -= zemljaPremik * dt * rotationalCoefcient;
             }
         }
 
         if(zemljaAnimator.playingAnim == 3 && zemljaAction == "retreat") {
             
             if (zemljaAnimator.time > 0.2 && zemljaAnimator.time < zemljaAnimator.animLen - 0.2) {
-                npcZemljaTransform.translation[0] += zemljaPremik * dt;
+                npcZemljaTransform.translation[0] += zemljaPremik * dt * rotationalCoefcient;
             }
             //zemljaMoveOnce = false;
         }
@@ -824,38 +979,82 @@ npcZemlja.addComponent({
 
         }
 
-        if (zemljaAnimator.playingAnim == 6 && zemljaAttacking && !blocking && Math.abs(razlika) <= hitRange) {
+        if (zemljaAnimator.playingAnim == 6 && zemljaAttacking && Math.abs(razlika) <= hitRange && grounded) {
+            //freezetimer = 1;
+            punchSound.currentTime = 0;
+            blockSound.currentTime = 0;
+            
 
-            if (!alreadyHitSonce && zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5) {
+            if (!alreadyHitSonce && zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5 && !blocking) {
                 healthPlayer -= 10;
                 alreadyHitSonce = true; // mark that hit connected
+                //freezetimer = 5;
                 playerAnimator.play(8); // force hit reaction
+                punchSound.play();
+                //freezetimer = 3;
                 updateHealthBars("player-health-bar", healthPlayer, maxHealth);
+                //freezetimer = 5;
                 checkGameOver();
+            } else if(zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5 && blocking){
+                blockSound.play();
             }
-        }
+        } /*else {
+            punchMissSound.currentTime = 0;
+            punchMissSound.play();
+        }*/
 
-        if (zemljaAnimator.playingAnim == 7 && zemljaAttacking && !blocking && Math.abs(razlika) <= hitRange) {
+        if (zemljaAnimator.playingAnim == 7 && zemljaAttacking && Math.abs(razlika) <= hitRange && grounded) {
+            //freezetimer = 1;
+            superPunchSound.currentTime = 0;
+            blockSound.currentTime = 0;
 
-            if (!alreadyHitSonce && zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5) {
+            
+            if (!alreadyHitSonce && zemljaAnimator.time > 1 && zemljaAnimator.time < zemljaAnimator.animLen - 0.5 && !blocking) {
                 healthPlayer -= 20;
                 alreadyHitSonce = true; // mark that hit connected
+                //freezetimer = 5;
+
                 playerAnimator.play(8); // force hit reaction
+                superPunchSound.play();
+                playerGetSuperPunched = true;
+                //freezetimer = 3;
                 updateHealthBars("player-health-bar", healthPlayer, maxHealth);
+                //freezetimer = 5;
                 checkGameOver();
+            } else if(zemljaAnimator.time > 1 && zemljaAnimator.time < zemljaAnimator.nimLen - 0.5 && blocking) {
+                blockSound.play();
             }
-        }
+        } /*else {
+            superMissSound.currentTime = 0;
+            superMissSound.play();
+        }*/
 
-        if (zemljaAnimator.playingAnim == 8 && zemljaAttacking && !blocking && Math.abs(razlika) <= kickRange) {
+        if (zemljaAnimator.playingAnim == 8 && zemljaAttacking && Math.abs(razlika) <= kickRange && grounded) {
+            //freezetimer = 1;
+            kickSound.currentTime = 0;
+            blockSound.curretTime = 0;
 
-            if (!alreadyHitSonce && zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5) {
+
+            if (!alreadyHitSonce && zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5 && !blocking) {
                 healthPlayer -= 10;
                 alreadyHitSonce = true; // mark that hit connected
+                //freezetimer = 5;
                 playerAnimator.play(9); // force hit reaction
+                kickSound.play();
+                //freezetimer = 3;
+                playerGetKicked = true;
+                //if (playerAnimator.time > 0.2 && playerAnimator.time < playerAnimator.animLen - 0.2) {
+                //playerTransform.translation[0] -= velocityLR * dt;
                 updateHealthBars("player-health-bar", healthPlayer, maxHealth);
+                //freezetimer = 5;
                 checkGameOver();
+            } else if(zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5 && blocking) {
+                blockSound.play();
             }
-        }
+        } /*else {
+            kickMissSound.currentTime = 0;
+            kickMissSound.play();
+        }*/
 
 
         if(!zemljaAnimator.playing && zemljaAttacking) {
