@@ -167,7 +167,7 @@ sonceTransform.translation = [2, -2, 0];
 //-------------------------------------------------------ANIMATED SUN--------------------------------------------------------------------
 //loading animated test object
 loader = new GLTFLoader();
-await loader.load(new URL('./models/sunAnimated9/animatedSun3.gltf', import.meta.url));
+await loader.load(new URL('./models/sunAnimated11/animatedSun3.gltf', import.meta.url));
 const loadedScene = loader.loadScene();
 console.log(loadedScene);
 const playerArmature = loadedScene[0];
@@ -192,7 +192,9 @@ const kickBlended = loader.loadAnimation("kickBlended", playerModel.skin);
 const hit = loader.loadAnimation("hitBlended", playerModel.skin);
 const hitKnockback = loader.loadAnimation("hitStepBackBlended", playerModel.skin);
 const startAnim = loader.loadAnimation("startAnimNoVerticalBlended", playerModel.skin);
-player.addComponent(new Animator([idleAnim, punchBlended, stepForwardBlended, stepBackBlended, jumpAnim, hookPunchBlended, block, kickBlended, hit, hitKnockback, stepBack, startAnim]));  //dodajanje vseh animacij v player-ja
+const backflipAnim = loader.loadAnimation("backflip", playerModel.skin);
+const frontFlipAnim = loader.loadAnimation("frontFlip", playerModel.skin);
+player.addComponent(new Animator([idleAnim, punchBlended, stepForwardBlended, stepBackBlended, jumpAnim, hookPunchBlended, block, kickBlended, hit, hitKnockback, stepBack, startAnim, backflipAnim, frontFlipAnim]));  //dodajanje vseh animacij v player-ja
 
 player.isAnimated = true;
 
@@ -332,6 +334,37 @@ kickMissSound.preload = 'auto';
 
 //-------------------------------------------------------------------EVENT LISTENERS and USER INPUT-----------------------------------------------------------------------
 let keys = {};
+// window.addEventListener('keydown', (e) => {
+//     if (rotationalCoefcient == 1){
+//         keys[e.key.toLowerCase()] = true
+//     } else{
+//         if (e.key.toLowerCase() == "a"){
+//             keys["d"] = true
+//         }
+//         if (e.key.toLowerCase() == "d"){
+//             keys["a"] = true
+//         }
+//         else{
+//             keys[e.key.toLowerCase()] = true
+//         }
+//     }
+    
+// });
+// window.addEventListener('keyup', (e) => {
+//     if (rotationalCoefcient == 1){
+//         keys[e.key.toLowerCase()] = false
+//     } else{
+//         if (e.key.toLowerCase() == "a"){
+//             keys["d"] = false
+//         }
+//         else if (e.key.toLowerCase() == "d"){
+//             keys["a"] = false
+//         }
+//         else{
+//             keys[e.key.toLowerCase()] = false
+//         }
+//     }
+// });
 window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
 window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
@@ -390,8 +423,8 @@ function startActualGame() {
     
     setTimeout(() =>{   //nastavi gameRunning z delayom (pocakaj tako dolgo da se starting animation predvaja do konca)
         gameRunning = true;
-        gravity = 70.0;
-        initVelY = (gravity*(1.1333333253860474-2*0.3))/2; //ta cifra je dolzina skoka v sekundah (animLen - 2*odmik)
+        gravity = 30.0;
+        initVelY = (gravity*0.7/1.5)/2; //ta cifra je dolzina skoka v sekundah (animLen - 2*odmik)
         console.log("fight");
     }, 3400);
 }
@@ -447,17 +480,20 @@ gameManager.addComponent({
 
         //---------------------------------------OBRACANJE IGRALCEV-------------------------------------------------------------
         //player je na levi strani
-        if (playerTransform.translation[0] < npcZemljaTransform.translation[0]){
-            rotationalCoefcient = 1;
-            playerTransform.rotation = faceRight;
-            npcZemljaTransform.rotation = faceLeft;
+        if (grounded){    //orientacijo spremenimo samo, ce sta oba na tleh  (v nasprotne primeru se animacija front flip zelo grdo izvede)
 
-        } else{ //player je na desni
-            rotationalCoefcient = -1;
-            playerTransform.rotation = faceLeft;
-            npcZemljaTransform.rotation = faceRight;
+            if (playerTransform.translation[0] < npcZemljaTransform.translation[0]){
+                rotationalCoefcient = 1;
+                playerTransform.rotation = faceRight;
+                npcZemljaTransform.rotation = faceLeft;
+
+            } else{ //player je na desni
+                rotationalCoefcient = -1;
+                playerTransform.rotation = faceLeft;
+                npcZemljaTransform.rotation = faceRight;
+            }
         }
-
+        
         //---------------------------------------POPRAVEK NA Z-OSI-------------------------------------------------------------
         //ce se zgodi da sonce ali zemlja nista na z = 0, potem popravi (te se for some reason lahko zgodi ko hoce player skociti cez zemljo)
         if (playerTransform.translation[2] != 0) {playerTransform.translation[2] = 0}
@@ -495,7 +531,7 @@ let velocityLR = 2.5;
 let attacking = false;
 let grounded = true;
 let blocking = false;
-initVelY = (gravity*(1.1333333253860474-2*0.3))/2; //ta cifra je dolzina skoka v sekundah (animLen - 2*odmik)
+
 let velocityY = initVelY;
 const hitRange = 1.4;
 const kickRange = 1.8;
@@ -513,6 +549,8 @@ let zemljaBlocking = false;
 let zemljaJumping = false;
 let zemljaVelocity = initVelY;      //hitrost zemlje v vertikalni smeri
 let zemljaPremik = 2.5;             //hitrost zemlje levo-desno
+let zemljaGravity = 70;
+let zemljaInitVelY = (zemljaGravity*(1.1333333253860474-2*0.3))/2;    //ta cifra je dolzina skoka v sekundah (animLen - 2*odmik)
 
 //hitstopManager
 const hitStop = new HitStopManager();
@@ -541,13 +579,17 @@ const playerAttackReset = {
     moveR: true,
     moveL: true,
 }
-
+let rawDir = 0;  //-1 pomeni levo, 1 pomeni desno
+let dir = 0; //dejanska smer ki vkljucuje se rotationalCoef
 
 player.addComponent({
     update(t, dt){
         if(!gameRunning) {
             return;
         }
+
+        rawDir = (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
+        dir = rawDir * rotationalCoefcient;
         
         hitStop.update(dt);
         if(hitStop.active) {
@@ -559,6 +601,7 @@ player.addComponent({
         const razlika = s[0] - z[0];
         //console.log("payer animation playing: "+ playerAnimator.playing);
 
+        //premik naprej pri navadnem punch-u
         if(attacking && playerAnimator.playingAnim == 1) {
            if(playerAnimator.time > 0 && playerAnimator.time < playerAnimator.animLen-0.4) {
                 playerTransform.translation[0] += velocityLR * dt * rotationalCoefcient;
@@ -567,7 +610,7 @@ player.addComponent({
 
         if(playerGetKicked && playerAnimator.playingAnim == 9) {
             if (playerAnimator.time > 0.2 && playerAnimator.time < playerAnimator.animLen - 1) {
-                playerTransform.translation[0] -= velocityLR * dt * rotationalCoefcient;
+                playerTransform.translation[0] -= velocityLR * dt;
             }
         }
 
@@ -591,54 +634,89 @@ player.addComponent({
         }
 
         //moving right---------------------------------------------------------------
-        if (keys.d  && !attacking && !blocking){
-            playerTransform.translation[0] += velocityLR * dt;
+        if (dir == 1  && !attacking && !blocking && grounded){
+            playerTransform.translation[0] += velocityLR * dt * rotationalCoefcient;
             if (moveOnce && grounded){
-                //playerAnimator.playShort(2, 0.13, 0.112);
-                playerAnimator.play(2);
+                playerAnimator.play(2);     //predvajaj anim za korak v desno
                 moveOnce = false;
             }  
             
         }
 
         //moving left---------------------------------------------------------------
-        if (keys.a  && !attacking && !blocking){
-            playerTransform.translation[0] += -velocityLR * dt;
+        if (dir == -1  && !attacking && !blocking && grounded){
+            playerTransform.translation[0] += -velocityLR * dt * rotationalCoefcient;
             if (moveOnce && grounded && playerAttackReset.moveL){
-                playerAnimator.playShort(3, 0.0, 0.0);
-                //playerAnimator.play(3);
+                playerAnimator.play(3);     //predvajaj animacijo za korak v levo
                 moveOnce = false;
-                //playerAttackReset.moveL = false;
-            }
-            if (moveOnce && !playerAttackReset.moveL){
-                moveOnce = false;
-                playerAnimator.play(10);
             }
         }
-        //if (!keys.a){playerAttackReset.moveL = true;}
 
+        // //jumping (playing animation)--------------------------------------------
+        // if (keys.w && attacking == false){
+        //     if (grounded){
+        //         velocityY = initVelY; //ta stvar triggera premikanje v vertikalni smeri
+        //         playerAnimator.play(4);
+        //         grounded = false;
+        //     }
+        // }
+
+        // //jumping (actually moving up-down)---------------------------------------
+        // if (playerAnimator.playingAnim == 4 && playerAnimator.time > 0.3 && playerAnimator.time < playerAnimator.animLen - 0.3){
+        //     velocityY -= gravity*dt;
+        //     playerTransform.translation[1] += velocityY*dt;
+
+        //     if (playerTransform.translation[1] <= -1){
+        //         console.log("correcting y-position");
+        //         playerTransform.translation[1] = -1;
+        //     } 
+        // }
+
+        //back-flip---------------------------------------------------------------------------------
+        if (keys.w && dir == -1 && grounded && !attacking && !blocking){
+            gravity = 70;
+            initVelY = (gravity*(0.65/1.5))/2
+            velocityY = initVelY;
+            playerAnimator.playFast(12, 1.5);
+            grounded = false;
+        }
         
-        //ce spustimo gumb se mora tudi animacija za premikanje predhodno ustaviti
-        //if ((!keys.a && !keys.d) && (playerAnimator.playingAnim == 3 || playerAnimator.playingAnim == 2)){playerAnimator.playing = false;}
-
-        //jumping (playing animation)--------------------------------------------
-        if (keys.w && attacking == false){
-            if (grounded){
-                velocityY = initVelY; //ta stvar triggera premikanje v vertikalni smeri
-                playerAnimator.play(4);
-                grounded = false;
-            }
-        }
-
-        //jumping (actually moving up-down)---------------------------------------
-        if (playerAnimator.playingAnim == 4 && playerAnimator.time > 0.3 && playerAnimator.time < playerAnimator.animLen - 0.3){
+        if (playerAnimator.playing && playerAnimator.playingAnim == 12 && playerAnimator.time >= 0.67 && playerAnimator.time < 1.37){
             velocityY -= gravity*dt;
-            playerTransform.translation[1] += velocityY*dt;
-
+            playerTransform.translation[1] += velocityY*dt;     //premik gor-dol
+            if (playerAnimator.time > 0.71){
+                playerTransform.translation[0] -= velocityLR*dt*1.9*rotationalCoefcient;    //premik levo-desno //vecji kot je faktor vmes, dlje se premakne v zraku
+            }
+            
             if (playerTransform.translation[1] <= -1){
                 console.log("correcting y-position");
                 playerTransform.translation[1] = -1;
-            } 
+            }
+        }
+
+        //front-flip----------------------------------------------------------------------------------
+        if (keys.w && dir == 1 && grounded && !attacking && !blocking){
+            gravity = 20;
+            initVelY = (gravity*(1.0))/2
+            velocityY = initVelY;
+            playerAnimator.playFast(13, 1.0);
+            grounded = false;
+        }
+
+        if (playerAnimator.playing && playerAnimator.playingAnim == 13){
+            
+            playerTransform.translation[0] += velocityLR*dt*0.7*rotationalCoefcient;    //premik levo-desno
+            
+            if (playerAnimator.time > 0.47 && playerAnimator.time < 1.467){
+                velocityY -= gravity*dt;
+                playerTransform.translation[0] += velocityLR*dt*0.9*rotationalCoefcient;    //v zraku gre hitreje levo-desno   //vecji kot je faktor vmes, dlje se premakne v zraku
+                playerTransform.translation[1] += velocityY*dt;     //premik gor-dol
+            }
+            
+            if (playerTransform.translation[1] <= -1){
+                //console.log("correcting y-position");
+                playerTransform.translation[1] = -1;
+            }
         }
 
 
@@ -825,7 +903,8 @@ player.addComponent({
             console.log(z);
             console.log(Math.abs(razlika));*/
             //console.log("popoppop");
-            console.log("Zemlja health: " + healthZemlja);
+
+            //console.log("Zemlja health: " + healthZemlja);
 
             if (!keys.a && !keys.d && !keys.w){ //zato da objekt ne gre za 1 frame v idle mode potem pa ze v nek movind animation ce drzimo nek gumb
                 playerAnimator.play(0);
@@ -875,11 +954,13 @@ player.addComponent({
 
 npcZemlja.addComponent({
     update(t, dt) {
-        /*
-        if (!zemljaAnimator.playing){
-            zemljaAnimator.play(0);
-        }
-        return;*/
+        // if (!zemljaAnimator.playing){
+        //     zemljaAnimator.play(0);
+        // }
+        // return;
+
+        
+
         if(!gameRunning) {
             return;
         }
@@ -965,7 +1046,7 @@ npcZemlja.addComponent({
             case "jump":
                 zemljaAnimator.play(4);
                 zemljaJumping = true;
-                zemljaVelocity = initVelY;
+                zemljaVelocity = zemljaInitVelY;
                 break;
             case "block":
                 zemljaAnimator.play(5);
@@ -1025,7 +1106,7 @@ npcZemlja.addComponent({
 
         if (zemljaAnimator.playingAnim == 4 && zemljaJumping && zemljaAnimator.time > 0.3 && zemljaAnimator.time < zemljaAnimator.animLen - 0.3 ){
     
-            zemljaVelocity -= gravity*dt;
+            zemljaVelocity -= zemljaGravity*dt;
             npcZemljaTransform.translation[1] += zemljaVelocity*dt;
 
             if(npcZemljaTransform.translation[1] <= -1) {
@@ -1095,7 +1176,7 @@ npcZemlja.addComponent({
                 healthPlayer -= 10;
                 alreadyHitSonce = true; // mark that hit connected
                 //freezetimer = 5;
-                playerAnimator.play(9); // force hit reaction
+                playerAnimator.play(9); // force hit reaction - animation with step-back (knockback)
                 kickSound.play();
                 //freezetimer = 3;
                 playerGetKicked = true;

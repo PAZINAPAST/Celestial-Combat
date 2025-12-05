@@ -10,6 +10,7 @@ export class Animator {
         this.animLen = -1;              //dolzina animacije v sekundah
         this.cut = 0;                   //koliko sekund skrajsamo animacijo (se cut-sekund predcasno konca)
         this.paused = false;
+        this.speedCoef = 1.0            //hitrost pospesitve animacije
     }
 
     play(index) {
@@ -21,6 +22,7 @@ export class Animator {
         this.playingAnim = index;
         this.animLen = this.animations[index].maxTime;
         this.cut = 0;
+        this.speedCoef = 1.0;
         //console.log("trajanje animacije: " + this.animLen)
     }
 
@@ -35,11 +37,16 @@ export class Animator {
         this.cut = end;
     }
 
+    playFast(index, k){
+        this.play(index);
+        this.speedCoef = k;
+    }
+
     update1(dt) {
         if (!this.playing || this.current === null) return;     //ce se nobena animacija ne predvaja, potem nic ne naredi
         if(this.paused) return;
 
-        this.time += dt;
+        this.time += dt*this.speedCoef;
         const anim = this.animations[this.current];
 
         const duration = anim.maxTime - this.cut;

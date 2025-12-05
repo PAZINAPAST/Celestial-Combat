@@ -57,6 +57,11 @@ export class Physics {
     resolveCollision(a, b) {
         // Get global space AABBs.
 
+        //ce je kateri izmed njiju v zraku, potem ne delalaj kolizije
+        if (a.getComponentOfType(Parent).entity.getComponentOfType(Transform).translation[1] > -0.5 || b.getComponentOfType(Parent).entity.getComponentOfType(Transform).translation[1] > -0.5){
+            //console.log("somebody airborn");
+            return;
+        }
 
         if (!a.aabb) { console.warn('No AABB for', a.name); return; }
         if (!b.aabb) { console.warn('No AABB for', b.name); return; }
@@ -160,7 +165,7 @@ export class Physics {
                 transform_b.translation[0] -= dx;
             }
         }
-        
+
         //ce se samo en character premika potem upocasni njegov premik, ce pa se premikata drug proti drugem pa se ustavita (oba se premakneta za 0.5*minDirection, le v nasprotno smer)
         vec3.multiply(minDirection, minDirection, [0.5, 0.5, 0.5]);
         vec3.add(transform_a.translation, transform_a.translation, minDirection);
