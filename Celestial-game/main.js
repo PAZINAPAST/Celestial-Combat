@@ -324,6 +324,9 @@ const blockSound = new Audio('./sounds/block.mp3');
 const punchMissSound = new Audio('./sounds/punchMiss.mp3');
 const superMissSound = new Audio('./sounds/superMiss.mp3');
 const kickMissSound = new Audio('./sounds/kickMiss.mp3');
+const loseSound = new Audio('./sounds/lose_sound.mp3');
+const winSound = new Audio('./sounds/win_sound.mp3');
+const backgroundSound = new Audio('./sounds/backround.mp3');
 
 punchSound.preload = 'auto';
 superPunchSound.preload = 'auto';
@@ -332,7 +335,9 @@ blockSound.preload = 'auto';
 punchMissSound.preload = 'auto';
 superMissSound.preload = 'auto';
 kickMissSound.preload = 'auto';
-
+loseSound.preload = 'auto';
+winSound.preload = 'auto';
+backgroundSound.preload = 'auto';
 
 //-------------------------------------------------------------------EVENT LISTENERS and USER INPUT-----------------------------------------------------------------------
 let keys = {};
@@ -359,10 +364,14 @@ let gravity = 20.0;
 let initVelY = 0;
 const playerInitHeight = 0.6*0.6*0.5*gravity;
 
+
+
 startButton.addEventListener("click", () => {
     startScreen.classList.add("hidden");
     controlsPopup.classList.add("active"); 
-  
+
+    backgroundSound.volume = 0.1;
+    backgroundSound.play();
 
     closePopup.addEventListener("click", closeControlsPopup);
 
@@ -413,6 +422,8 @@ function checkGameOver(){
     if (healthPlayer <= 0){
         gameRunning = false;
         playerAnimator.play(14);
+        loseSound.currentTime = 0;
+        loseSound.play();
         setTimeout(()=>{
             endMessage.textContent = "You lose!";
             endScreen.classList.remove("hidden");
@@ -421,6 +432,8 @@ function checkGameOver(){
     } else if(healthZemlja <= 0){
         gameRunning = false;
         zemljaAnimator.play(11);
+        winSound.currentTime = 0;
+        winSound.play();
         setTimeout(()=>{
             endMessage.textContent = "You win!";
             endScreen.classList.remove("hidden");
@@ -521,6 +534,7 @@ let playerGetPunched = false;
 let freezetimer = 0;
 
 // zemlja variables
+let soundAlreadyPlayed = false;
 let zemljaMoveOnce = true;
 let decisionTimer = 0;
 let zemljaAction = "idle";
@@ -590,7 +604,7 @@ player.addComponent({
 
         if(playerGetKicked && playerAnimator.playingAnim == 9) {
             if (playerAnimator.time > 0.2 && playerAnimator.time < playerAnimator.animLen - 1) {
-                playerTransform.translation[0] -= velocityLR * dt;
+                playerTransform.translation[0] -= velocityLR * dt * rotationalCoefcient;
             }
         }
 
@@ -605,13 +619,13 @@ player.addComponent({
         if(!playerAnimator.playing && playerGetSuperPunched) {
             playerGetSuperPunched = false;
         }
-    
+        /*
         if (keys.t){
             npcZemljaTransform.translation[0] -= velocityLR*dt;
         }
         if (keys.y){
             npcZemljaTransform.translation[0] += velocityLR*dt;
-        }
+        }*/
 
         //moving right---------------------------------------------------------------
         if (dir == 1  && !attacking && !blocking && grounded){
@@ -713,13 +727,13 @@ player.addComponent({
             //console.log("zemljaBlock: " + zemljaBlocking);
             if(Math.abs(razlika) <= hitRange) {
                 setTimeout(() => {
-                    hitStop.trigger(0.2);
+                    hitStop.trigger(0.1);
                 },300);
-            }/* else {
+            } else {
                 //blockSound.play();
                 punchMissSound.currentTime = 0;
                 punchMissSound.play();
-            }*/
+            }
 
             if(Math.abs(razlika) <= hitRange && zemljaBlocking) {
                 blockSound.play();
@@ -771,11 +785,11 @@ player.addComponent({
                 setTimeout(() => {
                     hitStop.trigger(0.1);
                 },800);
-            } /*else {
+            } else {
                 //blockSound.play();
                 superMissSound.currentTime = 0;
                 superMissSound.play();
-            }*/
+            }
 
             if(Math.abs(razlika) <= hitRange && zemljaBlocking) {
                 blockSound.play();
@@ -819,11 +833,11 @@ player.addComponent({
                 setTimeout(() => {
                     hitStop.trigger(0.15);
                 },600);
-            } /*else {
+            } else {
                 //blockSound.play();
                 kickMissSound.currentTime = 0;
                 kickMissSound.play();
-            }*/
+            }
 
             if(Math.abs(razlika) <= kickRange && zemljaBlocking) {
                 setTimeout(() => {
@@ -952,6 +966,12 @@ npcZemlja.addComponent({
             return;
         }
 
+        if(!zemljaAnimator.playing && soundAlreadyPlayed) {
+            soundAlreadyPlayed = false;
+        }
+
+        console.log("sound already played: " + soundAlreadyPlayed);
+
         decisionTimer -= dt;
         //console.log("decisionTimer: " + decisionTimer);
 
@@ -979,11 +999,11 @@ npcZemlja.addComponent({
             if(razlika <= hitRange) {
                 if(r <= 0.1) {
                     zemljaAction = "jump";
-                } else if(r <= 0.4) {
+                } else if(r <= 0.2) {
                     zemljaAction = "block";
-                } else if(r <= 0.55) {
+                } else if(r <= 0.9) {
                     zemljaAction = "punch";                   
-                } else if(r <= 0.7) {
+                } else if(r <= 0.95) {
                     zemljaAction = "superPunch";
                 } else {
                     zemljaAction = "retreat";
@@ -1007,8 +1027,8 @@ npcZemlja.addComponent({
                     zemljaAction = "block";
                 } else if (r <= 0.3) {
                     zemljaAction = "kick";
-                } else if(r <= 0.4) {
-                    zemljaAction = "idle";
+                } else if(r <= 0.9) {
+                    zemljaAction = "punch";
                 } else {
                     zemljaAction = "advance";
                 }
@@ -1040,7 +1060,7 @@ npcZemlja.addComponent({
                 alreadyHitSonce = false;
                 if(Math.abs(razlika) <= hitRange) {    
                     setTimeout(()=> {
-                        hitStop.trigger(0.3);
+                        hitStop.trigger(0.1);
                     },300);
                 }
                 break;
@@ -1050,7 +1070,7 @@ npcZemlja.addComponent({
                 alreadyHitSonce = false;
                 if(Math.abs(razlika) <= hitRange) {    
                     setTimeout(()=> {
-                        hitStop.trigger(0.3);
+                        hitStop.trigger(0.1);
                     },800);
                 }
                 break;
@@ -1060,7 +1080,7 @@ npcZemlja.addComponent({
                 alreadyHitSonce = false;
                 if(Math.abs(razlika) <= kickRange) {    
                     setTimeout(()=> {
-                        hitStop.trigger(0.5);
+                        hitStop.trigger(0.1);
                     },900);
                 }
                 break;
@@ -1086,6 +1106,14 @@ npcZemlja.addComponent({
             //zemljaMoveOnce = false;
         }
 
+        // zemlja premik pri napadu
+        if(zemljaAnimator.playingAnim == 6 && zemljaAction == "punch") {
+
+            if(zemljaAnimator.time > 0.2 && zemljaAnimator.time < zemljaAnimator.animLen - 0.2) {
+                npcZemljaTransform.translation[0] -= zemljaPremik * dt * rotationalCoefcient;
+            }
+        }
+
         if (zemljaAnimator.playingAnim == 4 && zemljaJumping && zemljaAnimator.time > 0.3 && zemljaAnimator.time < zemljaAnimator.animLen - 0.3 ){
     
             zemljaVelocity -= zemljaGravity*dt;
@@ -1098,7 +1126,7 @@ npcZemlja.addComponent({
 
         }
 
-        if (zemljaAnimator.playingAnim == 6 && zemljaAttacking && Math.abs(razlika) <= hitRange && grounded) {
+        if (zemljaAnimator.playingAnim == 6 && zemljaAttacking && Math.abs(razlika) <= hitRange && grounded && !soundAlreadyPlayed) {
             //freezetimer = 1;
             punchSound.currentTime = 0;
             blockSound.currentTime = 0;
@@ -1110,19 +1138,24 @@ npcZemlja.addComponent({
                 //freezetimer = 5;
                 playerAnimator.play(8); // force hit reaction
                 punchSound.play();
+                soundAlreadyPlayed = true;
+                //npcZemljaTransform.translation[0] -= zemljaPremik * dt * rotationalCoefcient;
                 //freezetimer = 3;
                 updateHealthBars("player-health-bar", healthPlayer, maxHealth);
                 //freezetimer = 5;
                 checkGameOver();
             } else if(zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5 && blocking){
                 blockSound.play();
+                soundAlreadyPlayed = true;
             }
-        } /*else {
+            //soundAlreadyPlayed = true;
+        } else if(zemljaAnimator.playingAnim == 6 && Math.abs(razlika) > hitRange && zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5 && !soundAlreadyPlayed) {
             punchMissSound.currentTime = 0;
             punchMissSound.play();
-        }*/
+            soundAlreadyPlayed = true;
+        }
 
-        if (zemljaAnimator.playingAnim == 7 && zemljaAttacking && Math.abs(razlika) <= hitRange && grounded) {
+        if (zemljaAnimator.playingAnim == 7 && zemljaAttacking && Math.abs(razlika) <= hitRange && grounded && !soundAlreadyPlayed) {
             //freezetimer = 1;
             superPunchSound.currentTime = 0;
             blockSound.currentTime = 0;
@@ -1135,6 +1168,7 @@ npcZemlja.addComponent({
 
                 playerAnimator.play(8); // force hit reaction
                 superPunchSound.play();
+                soundAlreadyPlayed = true;
                 playerGetSuperPunched = true;
                 //freezetimer = 3;
                 updateHealthBars("player-health-bar", healthPlayer, maxHealth);
@@ -1142,13 +1176,18 @@ npcZemlja.addComponent({
                 checkGameOver();
             } else if(zemljaAnimator.time > 1 && zemljaAnimator.time < zemljaAnimator.nimLen - 0.5 && blocking) {
                 blockSound.play();
+                soundAlreadyPlayed = true;
             }
-        } /*else {
+
+            //soundAlreadyPlayed = true;
+
+        } else if(zemljaAnimator.playingAnim == 7 && Math.abs(razlika) > hitRange && zemljaAnimator.time > 1 && zemljaAnimator.time < zemljaAnimator.animLen - 0.5 && !soundAlreadyPlayed) {
             superMissSound.currentTime = 0;
             superMissSound.play();
-        }*/
+            soundAlreadyPlayed = true;
+        }
 
-        if (zemljaAnimator.playingAnim == 8 && zemljaAttacking && Math.abs(razlika) <= kickRange && grounded) {
+        if (zemljaAnimator.playingAnim == 8 && zemljaAttacking && Math.abs(razlika) <= kickRange && grounded && !soundAlreadyPlayed) {
             //freezetimer = 1;
             kickSound.currentTime = 0;
             blockSound.curretTime = 0;
@@ -1160,6 +1199,7 @@ npcZemlja.addComponent({
                 //freezetimer = 5;
                 playerAnimator.play(9); // force hit reaction - animation with step-back (knockback)
                 kickSound.play();
+                soundAlreadyPlayed = true;
                 //freezetimer = 3;
                 playerGetKicked = true;
                 //if (playerAnimator.time > 0.2 && playerAnimator.time < playerAnimator.animLen - 0.2) {
@@ -1169,17 +1209,25 @@ npcZemlja.addComponent({
                 checkGameOver();
             } else if(zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5 && blocking) {
                 blockSound.play();
+                soundAlreadyPlayed = true;
             }
-        } /*else {
+
+            //soundAlreadyPlayed = true;
+
+        } else if(zemljaAnimator.playingAnim == 8 && Math.abs(razlika) > kickRange && zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5 && !soundAlreadyPlayed) {
             kickMissSound.currentTime = 0;
             kickMissSound.play();
-        }*/
+            soundAlreadyPlayed = true;
+        }
 
 
         if(!zemljaAnimator.playing && zemljaAttacking) {
             zemljaAttacking = false;
             alreadyHitSonce = false;
+            //soundAlreadyPlayed = false;
         }
+
+        
         
         //[zemljaIdleAnim: 0, zemljaHitAnim: 1, zemljaStepForward: 2, zemljaStepBack: 3, zemljaJump: 4, zemljaBlock: 5, zemljaPunchAnim,: 6 zemljaHookPunch: 7, zemljaKick: 8]
 
