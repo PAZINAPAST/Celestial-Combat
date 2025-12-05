@@ -167,7 +167,7 @@ sonceTransform.translation = [2, -2, 0];
 //-------------------------------------------------------ANIMATED SUN--------------------------------------------------------------------
 //loading animated test object
 loader = new GLTFLoader();
-await loader.load(new URL('./models/sunAnimated11/animatedSun3.gltf', import.meta.url));
+await loader.load(new URL('./models/sunAnimated13/animatedSun3.gltf', import.meta.url));
 const loadedScene = loader.loadScene();
 console.log(loadedScene);
 const playerArmature = loadedScene[0];
@@ -194,7 +194,8 @@ const hitKnockback = loader.loadAnimation("hitStepBackBlended", playerModel.skin
 const startAnim = loader.loadAnimation("startAnimNoVerticalBlended", playerModel.skin);
 const backflipAnim = loader.loadAnimation("backflip", playerModel.skin);
 const frontFlipAnim = loader.loadAnimation("frontFlip", playerModel.skin);
-player.addComponent(new Animator([idleAnim, punchBlended, stepForwardBlended, stepBackBlended, jumpAnim, hookPunchBlended, block, kickBlended, hit, hitKnockback, stepBack, startAnim, backflipAnim, frontFlipAnim]));  //dodajanje vseh animacij v player-ja
+const dyingDramatic = loader.loadAnimation("dyingDramatic", playerModel.skin);
+player.addComponent(new Animator([idleAnim, punchBlended, stepForwardBlended, stepBackBlended, jumpAnim, hookPunchBlended, block, kickBlended, hit, hitKnockback, stepBack, startAnim, backflipAnim, frontFlipAnim, dyingDramatic]));  //dodajanje vseh animacij v player-ja
 
 player.isAnimated = true;
 
@@ -213,7 +214,7 @@ console.log(playerArmature);
 
 //-------------------------------------------------------ANIMATED EARTH--------------------------------------------------------------------
 loader = new GLTFLoader();
-await loader.load(new URL('./models/zemljaAnimated3/zemljaAnimated0.gltf', import.meta.url));
+await loader.load(new URL('./models/zemljaAnimated4/zemljaAnimated0.gltf', import.meta.url));
 const loadedSceneZemlja = loader.loadScene();
 console.log(loadedSceneZemlja);
 const zemljaArmature = loadedSceneZemlja[1];
@@ -238,8 +239,9 @@ const zemljaHookPunch = loader.loadAnimation("hookPunchBlended", npcZemljaModel.
 const zemljaKick = loader.loadAnimation("kickBlended", npcZemljaModel.skin);
 const zemljaHitKnockback = loader.loadAnimation("hitStepBackBlended", npcZemljaModel.skin);
 const zemljaStartAnim = loader.loadAnimation("startAnimBlended", npcZemljaModel.skin);
+const zemljaDyingDramatic = loader.loadAnimation("dyingDramatic", npcZemljaModel.skin);
 
-npcZemlja.addComponent(new Animator([zemljaIdleAnim, zemljaHitAnim, zemljaStepForward, zemljaStepBack, zemljaJump, zemljaBlock, zemljaPunchAnim, zemljaHookPunch, zemljaKick, zemljaHitKnockback, zemljaStartAnim]));
+npcZemlja.addComponent(new Animator([zemljaIdleAnim, zemljaHitAnim, zemljaStepForward, zemljaStepBack, zemljaJump, zemljaBlock, zemljaPunchAnim, zemljaHookPunch, zemljaKick, zemljaHitKnockback, zemljaStartAnim, zemljaDyingDramatic]));
 npcZemlja.isAnimated = true;
 
 npcZemlja.isAnimated = true;
@@ -334,37 +336,6 @@ kickMissSound.preload = 'auto';
 
 //-------------------------------------------------------------------EVENT LISTENERS and USER INPUT-----------------------------------------------------------------------
 let keys = {};
-// window.addEventListener('keydown', (e) => {
-//     if (rotationalCoefcient == 1){
-//         keys[e.key.toLowerCase()] = true
-//     } else{
-//         if (e.key.toLowerCase() == "a"){
-//             keys["d"] = true
-//         }
-//         if (e.key.toLowerCase() == "d"){
-//             keys["a"] = true
-//         }
-//         else{
-//             keys[e.key.toLowerCase()] = true
-//         }
-//     }
-    
-// });
-// window.addEventListener('keyup', (e) => {
-//     if (rotationalCoefcient == 1){
-//         keys[e.key.toLowerCase()] = false
-//     } else{
-//         if (e.key.toLowerCase() == "a"){
-//             keys["d"] = false
-//         }
-//         else if (e.key.toLowerCase() == "d"){
-//             keys["a"] = false
-//         }
-//         else{
-//             keys[e.key.toLowerCase()] = false
-//         }
-//     }
-// });
 window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
 window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
@@ -404,6 +375,7 @@ startButton.addEventListener("click", () => {
 });
 
 
+//------------------------------------------------------------START GAME PROCEDURE------------------------------------------------------------------
 function startActualGame() {
     playerTransform.translation = [-2, playerInitHeight, 0];
     npcZemljaTransform.translation = [2, playerInitHeight, 0];
@@ -423,12 +395,10 @@ function startActualGame() {
     
     setTimeout(() =>{   //nastavi gameRunning z delayom (pocakaj tako dolgo da se starting animation predvaja do konca)
         gameRunning = true;
-        gravity = 30.0;
-        initVelY = (gravity*0.7/1.5)/2; //ta cifra je dolzina skoka v sekundah (animLen - 2*odmik)
         console.log("fight");
     }, 3400);
 }
-
+//---------------------------------------------------------------STOP SCREEN-------------------------------------------------------------------------------
 
 restartButton.addEventListener("click", () => {
     endScreen.classList.add("hidden");
@@ -437,17 +407,27 @@ restartButton.addEventListener("click", () => {
     gameRunning = false;    //ustavi igro dokler je stop screen
 });
 
+
+//------------------------------------------------------------GAME OVER PROCEDURE--------------------------------------------------------------------
 function checkGameOver(){
     if (healthPlayer <= 0){
         gameRunning = false;
-        endMessage.textContent = "You lose!";
-        endScreen.classList.remove("hidden");
+        playerAnimator.play(14);
+        setTimeout(()=>{
+            endMessage.textContent = "You lose!";
+            endScreen.classList.remove("hidden");
+        }, 2500);
+        
     } else if(healthZemlja <= 0){
         gameRunning = false;
-        endMessage.textContent = "You win!"
-        endScreen.classList.remove("hidden");
+        zemljaAnimator.play(11);
+        setTimeout(()=>{
+            endMessage.textContent = "You win!";
+            endScreen.classList.remove("hidden");
+        }, 2500);
     }
 }
+//-----------------------------------------------------------------CONTROLS POP-UP---------------------------------------------------------------------------------
 
 
 function closeControlsPopup() {
@@ -685,7 +665,7 @@ player.addComponent({
             velocityY -= gravity*dt;
             playerTransform.translation[1] += velocityY*dt;     //premik gor-dol
             if (playerAnimator.time > 0.71){
-                playerTransform.translation[0] -= velocityLR*dt*1.9*rotationalCoefcient;    //premik levo-desno //vecji kot je faktor vmes, dlje se premakne v zraku
+                playerTransform.translation[0] -= velocityLR*dt*2.1*rotationalCoefcient;    //premik levo-desno //vecji kot je faktor vmes, dlje se premakne v zraku
             }
             
             if (playerTransform.translation[1] <= -1){
@@ -753,11 +733,13 @@ player.addComponent({
                 console.log("Zemlja hit! Health: " + healthZemlja);
                 punchSound.currentTime = 0;
                 
+                
 
                 setTimeout(() => {  //ce je hit registriran potem predvajaj hit animacijo in zmanjsaj health
                     //hitStop.trigger(0.1);
-                    
-                    zemljaAnimator.play(1);
+                    checkGameOver();    //to mora biti obvezno pred spodnjo funkcijo, zato da se hit animacije ne izvede ce je konec igre
+
+                    if (gameRunning){zemljaAnimator.play(1);}
                     punchSound.play();
                     updateHealthBars("npcZemlja-health-bar", healthZemlja, maxHealth);
                     if(npcZemljaTransform.translation[1] != -1) {
@@ -767,7 +749,6 @@ player.addComponent({
                 }, 50);
 
 
-                checkGameOver();
             }
 
         }
@@ -800,6 +781,7 @@ player.addComponent({
                 blockSound.play();
             }
 
+
             if(Math.abs(razlika) <= hitRange && !alreadyHitZemlja && !zemljaBlocking) {
                 healthZemlja -= 10;
                 alreadyHitZemlja = true;
@@ -808,7 +790,8 @@ player.addComponent({
                 
                 setTimeout(() => { 
                     //hitStop.trigger(0.5);
-                    zemljaAnimator.play(1);
+                    checkGameOver();
+                    if (gameRunning){zemljaAnimator.play(1);}
                     superPunchSound.play();
                     updateHealthBars("npcZemlja-health-bar", healthZemlja, maxHealth);
                     if(npcZemljaTransform.translation[1] != -1) {
@@ -817,7 +800,6 @@ player.addComponent({
                     freezetimer = 1;
                 }, 500);
 
-                checkGameOver();
             }
         }
         if (!keys.r){playerAttackReset.hook = true;}
@@ -856,10 +838,12 @@ player.addComponent({
                 zemljaBlocking = false;
                 console.log("Zemlja hit! Health: " + healthZemlja);
                 
+
                 //freezetimer = 5;
                 setTimeout(() => { 
                     //hitStop.trigger(0.5);
-                    zemljaAnimator.play(1);
+                    checkGameOver();
+                    if (gameRunning){zemljaAnimator.play(1);}
                     kickSound.play();
                     //freezetimer = 5;
                     updateHealthBars("npcZemlja-health-bar", healthZemlja, maxHealth);
@@ -869,7 +853,7 @@ player.addComponent({
                     
                 }, 400);
 
-                checkGameOver();
+                
             }
         }
         if (!keys.f){playerAttackReset.kick = true;}
@@ -958,8 +942,6 @@ npcZemlja.addComponent({
         //     zemljaAnimator.play(0);
         // }
         // return;
-
-        
 
         if(!gameRunning) {
             return;
