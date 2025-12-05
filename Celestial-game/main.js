@@ -691,7 +691,7 @@ player.addComponent({
         //front-flip----------------------------------------------------------------------------------
         if (keys.w && dir == 1 && grounded && !attacking && !blocking){
             gravity = 20;
-            initVelY = (gravity*(1.0))/2
+            initVelY = (gravity*(0.95))/2
             velocityY = initVelY;
             playerAnimator.playFast(13, 1.0);
             grounded = false;
