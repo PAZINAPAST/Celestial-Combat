@@ -47,12 +47,12 @@ const resources3 = await loadResources({
 
 const skyboxResources = await loadResources({
     mesh: new URL('../../../models/cube/cube.json', import.meta.url),
-    px: new URL('../../../models/space/vesolje10.png', import.meta.url),
-    nx: new URL('../../../models/space/vesolje10.png', import.meta.url),
-    py: new URL('../../../models/space/vesolje10.png', import.meta.url),
-    ny: new URL('../../../models/space/vesolje10.png', import.meta.url),
-    pz: new URL('../../../models/space/vesolje10.png', import.meta.url),
-    nz: new URL('../../../models/space/vesolje10.png', import.meta.url),
+    px: new URL('../../../models/space/vesolje11flipped.png', import.meta.url),
+    nx: new URL('../../../models/space/vesolje11flipped.png', import.meta.url),
+    py: new URL('../../../models/space/vesolje11.png', import.meta.url),
+    ny: new URL('../../../models/space/vesolje11.png', import.meta.url),
+    pz: new URL('../../../models/space/vesolje11.png', import.meta.url),
+    nz: new URL('../../../models/space/vesolje11.png', import.meta.url),
 });
 
 
