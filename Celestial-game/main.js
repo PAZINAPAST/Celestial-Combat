@@ -410,8 +410,10 @@ function startActualGame() {
 //---------------------------------------------------------------STOP SCREEN-------------------------------------------------------------------------------
 
 restartButton.addEventListener("click", () => {
+    backgroundSound.pause();
     endScreen.classList.add("hidden");
     startScreen.classList.remove("hidden");
+    backgroundSound.scrollTop()
     
     gameRunning = false;    //ustavi igro dokler je stop screen
 });
@@ -423,6 +425,7 @@ function checkGameOver(){
         gameRunning = false;
         playerAnimator.play(14);
         loseSound.currentTime = 0;
+        loseSound.volume = 0.2;
         loseSound.play();
         setTimeout(()=>{
             endMessage.textContent = "You lose!";
@@ -433,6 +436,7 @@ function checkGameOver(){
         gameRunning = false;
         zemljaAnimator.play(11);
         winSound.currentTime = 0;
+        winSound.volume = 0.2;
         winSound.play();
         setTimeout(()=>{
             endMessage.textContent = "You win!";
@@ -857,7 +861,7 @@ player.addComponent({
                 setTimeout(() => { 
                     //hitStop.trigger(0.5);
                     checkGameOver();
-                    if (gameRunning){zemljaAnimator.play(1);}
+                    if (gameRunning){zemljaAnimator.play(9);}
                     kickSound.play();
                     //freezetimer = 5;
                     updateHealthBars("npcZemlja-health-bar", healthZemlja, maxHealth);
@@ -1218,6 +1222,11 @@ npcZemlja.addComponent({
             kickMissSound.currentTime = 0;
             kickMissSound.play();
             soundAlreadyPlayed = true;
+        }
+
+        //zemlja hit stepback movement
+        if(zemljaAnimator.playingAnim == 9 && zemljaAnimator.time > 0.2 && zemljaAnimator.time < zemljaAnimator.animLen - 0.8) {
+            npcZemljaTransform.translation[0] += zemljaPremik * dt * rotationalCoefcient;
         }
 
 
