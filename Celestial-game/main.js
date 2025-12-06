@@ -3,7 +3,7 @@ import { UpdateSystem } from 'engine/systems/UpdateSystem.js';
 
 //import { UnlitRenderer } from 'engine/renderers/UnlitRenderer.js';
 import { SkyBoxRenderer } from 'engine/renderers/SkyBoxRenderer.js';
-import { TouchController } from 'engine/controllers/TouchController.js';
+//import { TouchController } from 'engine/controllers/TouchController.js';
 
 import {
     Camera,
@@ -118,9 +118,10 @@ model2.addComponent(new Model({
 const camera = new Entity();
 camera.addComponent(new Transform({translation : [0, 0, 5]}));
 camera.addComponent(new Camera());
+/*
 camera.addComponent(new TouchController(camera, canvas, {
    distance: 5,
-}));
+}));*/
 
 const cube1Resources = await loadResources({
     mesh: new URL('../../../models/cube/cube.json', import.meta.url),
