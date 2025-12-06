@@ -196,3 +196,28 @@ body, html {
     box-shadow: 0 0 30px #a0c4ff, 0 0 60px #4f8fff;
     transform: scale(1.05);
 }
+
+#fight-overlay {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 6rem;
+    font-weight: bold;
+    color:red;
+    text-shadow: 2px 2px 8px black;
+    opacity: 0;
+    z-index: 9999;
+    pointer-events: none;
+}
+
+@keyframes fightAnimation {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5);}
+    20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2);}
+    60% { opacity: 1; transform: translate(-50%, -50%) scale(1.0);}
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8);}
+}
+
+#fight-overlay.active {
+    animation: fightAnimation 2s ease-in-out forwards;
+}

@@ -327,6 +327,7 @@ const kickMissSound = new Audio('./sounds/kickMiss.mp3');
 const loseSound = new Audio('./sounds/lose_sound.mp3');
 const winSound = new Audio('./sounds/win_sound.mp3');
 const backgroundSound = new Audio('./sounds/backround.mp3');
+const fightSound = document.getElementById("fight-sound");
 
 punchSound.preload = 'auto';
 superPunchSound.preload = 'auto';
@@ -338,6 +339,7 @@ kickMissSound.preload = 'auto';
 loseSound.preload = 'auto';
 winSound.preload = 'auto';
 backgroundSound.preload = 'auto';
+fightSound.preload = 'auto';
 
 //-------------------------------------------------------------------EVENT LISTENERS and USER INPUT-----------------------------------------------------------------------
 let keys = {};
@@ -358,6 +360,7 @@ const startButton = document.getElementById("start-button");
 const restartButton = document.getElementById("restart-button");
 const controlsPopup = document.getElementById("controls-popup");
 const closePopup = document.getElementById("close-popup");
+const fightOverlay = document.getElementById("fight-overlay");
 
 let gameRunning = false;
 let gravity = 20.0;
@@ -403,8 +406,18 @@ function startActualGame() {
     //}, 500);       //predvajaj start animacijo z zamikom
     
     setTimeout(() =>{   //nastavi gameRunning z delayom (pocakaj tako dolgo da se starting animation predvaja do konca)
-        gameRunning = true;
-        console.log("fight");
+        fightOverlay.classList.add("active");
+
+        fightSound.currentTime = 0;
+        fightSound.play();
+
+        setTimeout(() => {
+            fightOverlay.classList.remove("active");
+            gameRunning = true;
+            console.log("fight");
+        }, 2000);
+
+        
     }, 3400);
 }
 //---------------------------------------------------------------STOP SCREEN-------------------------------------------------------------------------------
