@@ -526,6 +526,27 @@ gameManager.addComponent({
             }
         }
 
+
+        hitStop.update(dt);
+        if(hitStop.active) {
+            return;
+        }
+
+        if(npcZemljaTransform.translation[0] <= -4.5) {
+            npcZemljaTransform.translation[0] = -4.5;
+        }
+
+        if(npcZemljaTransform.translation[0] >= 4.5) {
+            npcZemljaTransform.translation[0] = 4.5;
+        }
+
+        if(playerTransform.translation[0] <= -4.5) {
+            playerTransform.translation[0] = -4.5;
+        }
+
+        if(playerTransform.translation[0] >= 4.5) {
+            playerTransform.translation[0] = 4.5;
+        }
     }
 })
 
@@ -537,6 +558,7 @@ let alreadyHitZemlja = false;
 const playerAnimator = player.getComponentOfType(Animator);
 const zemljaAnimator = npcZemlja.getComponentOfType(Animator);
 let velocityLR = 2.5;
+let sonceHit = false;
 
 let attacking = false;
 let grounded = true;
@@ -602,10 +624,11 @@ player.addComponent({
         rawDir = (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
         dir = rawDir * rotationalCoefcient;
         
+        /*
         hitStop.update(dt);
         if(hitStop.active) {
             return;
-        }
+        }*/
 
         const s = playerTransform.translation;
         const z = npcZemljaTransform.translation;
@@ -643,7 +666,7 @@ player.addComponent({
         if (keys.y){
             npcZemljaTransform.translation[0] += velocityLR*dt;
         }*/
-
+        if(!sonceHit) {
         //moving right---------------------------------------------------------------
         if (dir == 1  && !attacking && !blocking && grounded){
             playerTransform.translation[0] += velocityLR * dt * rotationalCoefcient;
@@ -690,6 +713,7 @@ player.addComponent({
             velocityY = initVelY;
             playerAnimator.playFast(12, 1.5);
             grounded = false;
+            //attacking = true;
         }
         
         if (playerAnimator.playing && playerAnimator.playingAnim == 12 && playerAnimator.time >= 0.67 && playerAnimator.time < 1.37){
@@ -712,6 +736,7 @@ player.addComponent({
             velocityY = initVelY;
             playerAnimator.playFast(13, 1.0);
             grounded = false;
+            //attacking = true;
         }
 
         if (playerAnimator.playing && playerAnimator.playingAnim == 13){
@@ -742,10 +767,10 @@ player.addComponent({
 
 
             //console.log("zemljaBlock: " + zemljaBlocking);
-            if(Math.abs(razlika) <= hitRange) {
+            if(Math.abs(razlika) <= hitRange && grounded) {
                 setTimeout(() => {
                     hitStop.trigger(0.1);
-                },300);
+                },230);
             } else {
                 //blockSound.play();
                 punchMissSound.currentTime = 0;
@@ -756,7 +781,7 @@ player.addComponent({
                 blockSound.play();
             }
 
-            if(Math.abs(razlika) <= hitRange && !alreadyHitZemlja && !zemljaBlocking) {
+            if(Math.abs(razlika) <= hitRange && !alreadyHitZemlja && !zemljaBlocking && grounded) {
 
                 healthZemlja -= 10;
                 alreadyHitZemlja = true;
@@ -797,7 +822,7 @@ player.addComponent({
                 blockSound.currentTime = 0;
             }
 
-            if(Math.abs(razlika) <= hitRange) {
+            if(Math.abs(razlika) <= hitRange && grounded) {
                 //blockSound.play();
                 setTimeout(() => {
                     hitStop.trigger(0.1);
@@ -813,7 +838,7 @@ player.addComponent({
             }
 
 
-            if(Math.abs(razlika) <= hitRange && !alreadyHitZemlja && !zemljaBlocking) {
+            if(Math.abs(razlika) <= hitRange && !alreadyHitZemlja && !zemljaBlocking && grounded) {
                 healthZemlja -= 10;
                 alreadyHitZemlja = true;
                 zemljaBlocking = false;
@@ -845,7 +870,7 @@ player.addComponent({
                 blockSound.currentTime = 0;
             }
 
-            if(Math.abs(razlika) <= kickRange) {
+            if(Math.abs(razlika) <= kickRange && grounded) {
                 //blockSound.play();
                 setTimeout(() => {
                     hitStop.trigger(0.15);
@@ -863,7 +888,7 @@ player.addComponent({
                 //blockSound.play();
             }
 
-            if(Math.abs(razlika) <= kickRange && !alreadyHitZemlja && !zemljaBlocking) {
+            if(Math.abs(razlika) <= kickRange && !alreadyHitZemlja && !zemljaBlocking && grounded) {
                 healthZemlja -= 10;
                 alreadyHitZemlja = true;
                 zemljaBlocking = false;
@@ -899,7 +924,7 @@ player.addComponent({
         }
         if (!keys.q){playerAttackReset.block = true;}
 
-
+        }
         
 
         //reseting stuff | playing idle animation
@@ -909,6 +934,7 @@ player.addComponent({
             attacking = false;
             alreadyHitZemlja = false;
             blocking = false;
+            sonceHit = false;
 
             /*
             const s = playerTransform.translation;
@@ -977,11 +1003,11 @@ npcZemlja.addComponent({
         if(!gameRunning) {
             return;
         }
-
+        /*
         hitStop.update(dt);
         if(hitStop.active) {
             return;
-        }
+        }*/
 
         if(!zemljaAnimator.playing && soundAlreadyPlayed) {
             soundAlreadyPlayed = false;
@@ -1152,6 +1178,7 @@ npcZemlja.addComponent({
             if (!alreadyHitSonce && zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5 && !blocking) {
                 healthPlayer -= 10;
                 alreadyHitSonce = true; // mark that hit connected
+                sonceHit = true;
                 //freezetimer = 5;
                 playerAnimator.play(8); // force hit reaction
                 punchSound.play();
@@ -1181,6 +1208,7 @@ npcZemlja.addComponent({
             if (!alreadyHitSonce && zemljaAnimator.time > 1 && zemljaAnimator.time < zemljaAnimator.animLen - 0.5 && !blocking) {
                 healthPlayer -= 20;
                 alreadyHitSonce = true; // mark that hit connected
+                sonceHit = true;
                 //freezetimer = 5;
 
                 playerAnimator.play(8); // force hit reaction
@@ -1213,6 +1241,7 @@ npcZemlja.addComponent({
             if (!alreadyHitSonce && zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5 && !blocking) {
                 healthPlayer -= 10;
                 alreadyHitSonce = true; // mark that hit connected
+                sonceHit = true;
                 //freezetimer = 5;
                 playerAnimator.play(9); // force hit reaction - animation with step-back (knockback)
                 kickSound.play();
