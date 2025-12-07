@@ -30,20 +30,6 @@ import { HitStopManager } from './engine/animators/HitStopManager.js';
 
 import { mat4, vec3, quat } from 'glm';
 
-const resources1 = await loadResources({
-    'mesh': new URL('../../../models/sun/sonce-proto.obj', import.meta.url),
-    'image': new URL('../../../models/monkey/base.png', import.meta.url),
-});
-
-const resources2 = await loadResources({
-    'mesh' : new URL('../../../models/earth/zemlja-proto.obj', import.meta.url),
-    'image': new URL('../../../models/monkey/base.png', import.meta.url),
-});
-
-const resources3 = await loadResources({
-    'mesh': new URL('../../../models/floor/floor.json', import.meta.url),
-    'image': new URL('../../../models/space/vesolje.jpg', import.meta.url),
-});
 
 const skyboxResources = await loadResources({
     mesh: new URL('../../../models/cube/cube.json', import.meta.url),
@@ -83,37 +69,6 @@ const environmentImages = await Promise.all(skyFaces.map(async (img) => {
 }));
 skyboxRenderer.setEnvironment(environmentImages);
 
-const model1 = new Entity();
-model1.addComponent(new Transform({translation : [1,-2,0]}));
-model1.addComponent(new Model({
-    primitives: [
-        new Primitive({
-            mesh: resources1.mesh,
-            material: new Material({
-                baseTexture: new Texture({
-                    image: resources1.image,
-                    sampler: new Sampler(),
-                }),
-            }),
-        }),
-    ],
-}));
-
-const model2 = new Entity();
-model2.addComponent(new Transform({translation: [-1,-2,0]}));
-model2.addComponent(new Model({
-    primitives: [
-        new Primitive({
-            mesh: resources2.mesh,
-            material: new Material({
-                baseTexture: new Texture({
-                    image: resources2.image,
-                    sampler: new Sampler(),
-                }),
-            }),
-        }),
-    ],
-}));
 
 const camera = new Entity();
 camera.addComponent(new Transform({translation : [0, 0, 5]}));
@@ -268,7 +223,7 @@ const scene = [camera, npcZemlja, npcLuna , player, gameManager/*cube2*/];
 
 const light = new Entity();
 light.addComponent(new Light({
-    direction: [-1, 1, 1],
+    direction: [0, 0, -1]/*[-20, 0, -10],*/   //gor-dol, levo-desno, spredaj-zadaj
 }));
 scene.push(light);
 
@@ -616,6 +571,10 @@ const playerAttackReset = {
 let rawDir = 0;  //-1 pomeni levo, 1 pomeni desno
 let dir = 0; //dejanska smer ki vkljucuje se rotationalCoef
 
+let punchDamage = 5;
+let hookDamage = 15;
+let kickDamage = 10;
+
 player.addComponent({
     update(t, dt){
         if(!gameRunning) {
@@ -687,26 +646,6 @@ player.addComponent({
             }
         }
 
-        // //jumping (playing animation)--------------------------------------------
-        // if (keys.w && attacking == false){
-        //     if (grounded){
-        //         velocityY = initVelY; //ta stvar triggera premikanje v vertikalni smeri
-        //         playerAnimator.play(4);
-        //         grounded = false;
-        //     }
-        // }
-
-        // //jumping (actually moving up-down)---------------------------------------
-        // if (playerAnimator.playingAnim == 4 && playerAnimator.time > 0.3 && playerAnimator.time < playerAnimator.animLen - 0.3){
-        //     velocityY -= gravity*dt;
-        //     playerTransform.translation[1] += velocityY*dt;
-
-        //     if (playerTransform.translation[1] <= -1){
-        //         console.log("correcting y-position");
-        //         playerTransform.translation[1] = -1;
-        //     } 
-        // }
-
         //back-flip---------------------------------------------------------------------------------
         if (keys.w && dir == -1 && grounded && !attacking && !blocking){
             gravity = 70;
@@ -725,7 +664,7 @@ player.addComponent({
             }
             
             if (playerTransform.translation[1] <= -1){
-                console.log("correcting y-position");
+                //console.log("correcting y-position");
                 playerTransform.translation[1] = -1;
             }
         }
@@ -758,7 +697,7 @@ player.addComponent({
 
 
         //punch--------------------------------------------------------------------
-        if (keys.e){
+        if (keys.e && !attacking){
             if (grounded && !attacking && playerAttackReset.punch){
                 playerAnimator.play(1);
                 attacking = true;
@@ -771,7 +710,7 @@ player.addComponent({
             if(Math.abs(razlika) <= hitRange && grounded) {
                 setTimeout(() => {
                     hitStop.trigger(0.1);
-                },230);
+                },220);
             } else {
                 //blockSound.play();
                 punchMissSound.currentTime = 0;
@@ -784,7 +723,7 @@ player.addComponent({
 
             if(Math.abs(razlika) <= hitRange && !alreadyHitZemlja && !zemljaBlocking && grounded) {
 
-                healthZemlja -= 10;
+                healthZemlja -= punchDamage;
                 alreadyHitZemlja = true;
                 zemljaBlocking = false;
                 console.log("Zemlja hit! Health: " + healthZemlja);
@@ -814,7 +753,7 @@ player.addComponent({
         
 
         //hook punch----------------------------------------------------------------------
-        if (keys.r){
+        if (keys.r && !attacking){
             if (grounded && !attacking && playerAttackReset.hook){
                 playerAnimator.play(5);
                 attacking = true;
@@ -840,7 +779,7 @@ player.addComponent({
 
 
             if(Math.abs(razlika) <= hitRange && !alreadyHitZemlja && !zemljaBlocking && grounded) {
-                healthZemlja -= 10;
+                healthZemlja -= hookDamage;
                 alreadyHitZemlja = true;
                 zemljaBlocking = false;
                 console.log("Zemlja hit! Health: " + healthZemlja);
@@ -890,7 +829,7 @@ player.addComponent({
             }
 
             if(Math.abs(razlika) <= kickRange && !alreadyHitZemlja && !zemljaBlocking && grounded) {
-                healthZemlja -= 10;
+                healthZemlja -= kickDamage;
                 alreadyHitZemlja = true;
                 zemljaBlocking = false;
                 console.log("Zemlja hit! Health: " + healthZemlja);
@@ -1014,21 +953,13 @@ npcZemlja.addComponent({
             soundAlreadyPlayed = false;
         }
 
-        console.log("sound already played: " + soundAlreadyPlayed);
-
         decisionTimer -= dt;
-        //console.log("decisionTimer: " + decisionTimer);
 
         const s = playerTransform.translation;
         const z = npcZemljaTransform.translation;
         const razlika = Math.abs(s[0] - z[0]);
-        //console.log("ralika: "+ razlika);
 
-        
-        //console.log("razlika:"+ razlika);
-        //console.log("animator playing: "+ zemljaAnimator.playing);
 
-        
         if(decisionTimer <= 0 && !zemljaAnimator.playing) {
             // popravi dejanja
             //console.log("zgodi se neka anmiacija");
@@ -1036,8 +967,7 @@ npcZemlja.addComponent({
 
             decisionTimer = 0.1 + Math.random() * 0.1;
             const r = Math.random();
-            //zemljaAnimator.play(0);
-            console.log("random: " + r);
+            //console.log("random: " + r);
 
             // v rangeu za vse ounche razmerje je 30% blokada, 30% napad(15 punch, 15 super punch), 30% odmik, 10% jump 
             if(razlika <= hitRange) {
@@ -1045,9 +975,9 @@ npcZemlja.addComponent({
                     zemljaAction = "jump";
                 } else if(r <= 0.2) {
                     zemljaAction = "block";
-                } else if(r <= 0.9) {
+                } else if(r <= 0.8) {
                     zemljaAction = "punch";                   
-                } else if(r <= 0.95) {
+                } else if(r <= 0.88 ) {
                     zemljaAction = "superPunch";
                 } else {
                     zemljaAction = "retreat";
@@ -1177,7 +1107,7 @@ npcZemlja.addComponent({
             
 
             if (!alreadyHitSonce && zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5 && !blocking) {
-                healthPlayer -= 10;
+                healthPlayer -= punchDamage;
                 alreadyHitSonce = true; // mark that hit connected
                 sonceHit = true;
                 //freezetimer = 5;
@@ -1187,6 +1117,7 @@ npcZemlja.addComponent({
                 //npcZemljaTransform.translation[0] -= zemljaPremik * dt * rotationalCoefcient;
                 //freezetimer = 3;
                 updateHealthBars("player-health-bar", healthPlayer, maxHealth);
+                console.log("player hit: " + healthPlayer);
                 //freezetimer = 5;
                 checkGameOver();
             } else if(zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5 && blocking){
@@ -1207,7 +1138,7 @@ npcZemlja.addComponent({
 
             
             if (!alreadyHitSonce && zemljaAnimator.time > 1 && zemljaAnimator.time < zemljaAnimator.animLen - 0.5 && !blocking) {
-                healthPlayer -= 20;
+                healthPlayer -= hookDamage;
                 alreadyHitSonce = true; // mark that hit connected
                 sonceHit = true;
                 //freezetimer = 5;
@@ -1218,6 +1149,7 @@ npcZemlja.addComponent({
                 playerGetSuperPunched = true;
                 //freezetimer = 3;
                 updateHealthBars("player-health-bar", healthPlayer, maxHealth);
+                console.log("player hit: " + healthPlayer);
                 //freezetimer = 5;
                 checkGameOver();
             } else if(zemljaAnimator.time > 1 && zemljaAnimator.time < zemljaAnimator.nimLen - 0.5 && blocking) {
@@ -1240,7 +1172,7 @@ npcZemlja.addComponent({
 
 
             if (!alreadyHitSonce && zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5 && !blocking) {
-                healthPlayer -= 10;
+                healthPlayer -= kickDamage;
                 alreadyHitSonce = true; // mark that hit connected
                 sonceHit = true;
                 //freezetimer = 5;
@@ -1252,6 +1184,7 @@ npcZemlja.addComponent({
                 //if (playerAnimator.time > 0.2 && playerAnimator.time < playerAnimator.animLen - 0.2) {
                 //playerTransform.translation[0] -= velocityLR * dt;
                 updateHealthBars("player-health-bar", healthPlayer, maxHealth);
+                console.log("player hit: " + healthPlayer);
                 //freezetimer = 5;
                 checkGameOver();
             } else if(zemljaAnimator.time > 0.3 && zemljaAnimator.time < 0.5 && blocking) {
